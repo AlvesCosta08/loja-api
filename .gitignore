@@ -1,0 +1,51 @@
+# === Java / Maven ===
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# === IDE ===
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+nbproject/
+
+# === Sistema Operacional ===
+.DS_Store
+Thumbs.db
+*~
+
+# === Segredos / Configurações locais ===
+.env
+.env.*
+!.env.example
+application-local.yml
+application-local.properties
+*.local.yml
+
+# === Logs ===
+*.log
+logs/
+
+# === Testes / Cobertura ===
+**/surefire-reports/
+**/failsafe-reports/
+**/jacoco.exec
+**/*.hprof
+
+# === Build artifacts ===
+*.jar
+*.war
+*.ear
+!.mvn/wrapper/maven-wrapper.jar
+*.class

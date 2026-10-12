@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ============================ -->
+    <!-- HERANÇA — Spring Boot Parent  -->
+    <!-- ============================ -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.4.0</version>
+        <relativePath/>
+    </parent>
+
+    <!-- ============================ -->
+    <!-- IDENTIDADE DO PROJETO         -->
+    <!-- ============================ -->
+    <groupId>com.alvescosta</groupId>
+    <artifactId>loja-api</artifactId>
+    <version>0.10.0</version>
+    <packaging>jar</packaging>
+
+    <name>loja-api</name>
+    <description>API REST de e-commerce — Loja Virtual (TDD + Spring Boot 3.4 + Java 21)</description>
+    <url>https://github.com/AlvesCosta08/loja-api</url>
+    <inceptionYear>2026</inceptionYear>
+
+    <!-- ============================ -->
+    <!-- LICENÇA                       -->
+    <!-- ============================ -->
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+            <comments>Livre para uso, modificação e distribuição, com atribuição.</comments>
+        </license>
+    </licenses>
+
+    <!-- ============================ -->
+    <!-- AUTORES / EQUIPE              -->
+    <!-- ============================ -->
+    <developers>
+        <developer>
+            <id>AlvesCosta08</id>
+            <name>Alves Costa</name>
+            <email>SEU-EMAIL-REAL</email>
+            <url>https://github.com/AlvesCosta08</url>
+            <organization>Alves Costa</organization>
+            <organizationUrl>https://github.com/AlvesCosta08</organizationUrl>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+                <role>maintainer</role>
+            </roles>
+            <timezone>America/Fortaleza</timezone>
+        </developer>
+    </developers>
+
+    <!-- ============================ -->
+    <!-- CONTROLE DE VERSÃO            -->
+    <!-- ============================ -->
+    <scm>
+        <connection>scm:git:git://github.com/AlvesCosta08/loja-api.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/AlvesCosta08/loja-api.git</developerConnection>
+        <url>https://github.com/AlvesCosta08/loja-api/tree/main</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <!-- ============================ -->
+    <!-- ISSUES / CI                   -->
+    <!-- ============================ -->
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/AlvesCosta08/loja-api/issues</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>GitHub Actions</system>
+        <url>https://github.com/AlvesCosta08/loja-api/actions</url>
+    </ciManagement>
+
+    <!-- ============================ -->
+    <!-- PROPRIEDADES                  -->
+    <!-- ============================ -->
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Versões de dependências gerenciadas -->
+        <jjwt.version>0.12.6</jjwt.version>
+        <lombok.version>1.18.36</lombok.version>
+    </properties>
+
+    <!-- ============================ -->
+    <!-- DEPENDÊNCIAS                  -->
+    <!-- ============================ -->
+    <dependencies>
+
+        <!-- Web MVC (REST) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Security (JWT, filtros, roles) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- JPA / Hibernate -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Bean Validation (@NotBlank, @Email, etc.) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Actuator (/health, /metrics) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Flyway (migrations) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- JWT (JJWT 0.12.6) -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Driver JDBC PostgreSQL (produção) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- H2 — banco em memória usado nos testes -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ============================ -->
+        <!-- TESTES                        -->
+        <!-- ============================ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- ============================ -->
+    <!-- BUILD                         -->
+    <!-- ============================ -->
+    <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
+
+        <plugins>
+
+            <!-- Compilador + Lombok como annotation processor -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <parameters>true</parameters>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- Empacota como .jar executável (Spring Boot) -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- Surefire: relatórios de testes -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

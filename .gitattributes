@@ -1,0 +1,29 @@
+# Auto-detect text files and normalize line endings
+* text=auto eol=lf
+
+# Explicit declarations
+*.java    text diff=java
+*.kt      text diff=kotlin
+*.groovy  text diff=groovy
+*.md      text diff=markdown
+*.yml     text
+*.yaml    text
+*.xml     text
+*.sql     text
+*.sh      text eol=lf
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# Binary files
+*.jar     binary
+*.war     binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.ico     binary
+*.pdf     binary
+
+# Linguist: ignorar diretórios de build/vendor nas estatísticas
+target/   linguist-vendored
+.mvn/     linguist-vendored
