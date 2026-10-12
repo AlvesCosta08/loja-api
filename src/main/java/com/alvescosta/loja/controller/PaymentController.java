@@ -25,6 +25,15 @@ public class PaymentController {
                 orderId, currentUserId(principal), isAdmin(principal));
     }
 
+    @PostMapping("/card")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PaymentResponse createCard(
+            @AuthenticationPrincipal UserDetails principal,
+            @RequestParam Long orderId) {
+        return paymentService.createCard(
+                orderId, currentUserId(principal), isAdmin(principal));
+    }
+
     @GetMapping("/{id}")
     public PaymentResponse findById(
             @AuthenticationPrincipal UserDetails principal,

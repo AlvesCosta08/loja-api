@@ -15,6 +15,8 @@ public record PaymentResponse(
         BigDecimal amount,
         String pixCopyPaste,
         String pixQrCodeBase64,
+        String gatewayRef,
+        String clientSecret,
         Instant createdAt,
         Instant expiresAt,
         Instant confirmedAt
@@ -28,6 +30,8 @@ public record PaymentResponse(
                 p.getAmount(),
                 p.getPixCopyPaste(),
                 p.getPixQrCodeBase64(),
+                p.getGatewayRef(),
+                p.getClientSecret(),
                 p.getCreatedAt(),
                 p.getExpiresAt(),
                 p.getConfirmedAt()

@@ -43,6 +43,12 @@ public class Payment {
     @Column(name = "pix_qr_code_base64", columnDefinition = "TEXT")
     private String pixQrCodeBase64;
 
+    @Column(name = "gateway_ref", length = 100)
+    private String gatewayRef;
+
+    @Column(name = "client_secret", length = 255)
+    private String clientSecret;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

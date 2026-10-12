@@ -23,7 +23,7 @@ Atualizado ao final de cada fase concluída.
 | Pacote base | `com.alvescosta.loja` |
 | Repositório | https://github.com/AlvesCosta08/loja-api |
 | Autor | Alves Costa |
-| Última atualização | Fase 10 — Pagamento Pix |
+| Última atualização | Fase 11 — Pagamento com cartão |
 
 ---
 
@@ -56,12 +56,12 @@ Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
 | 8 | Cupons de desconto (`/coupons`) | Concluído |
 | 9 | Cálculo de frete (`/shipping`) | Concluído |
 | 10 | Pagamento Pix (`/payments`) | Concluído |
-| 11 | Pagamento com cartão (Stripe) | Próxima |
-| 12 | Painel administrativo | Pendente |
+| 11 | Pagamento com cartão (Stripe) | Concluído |
+| 12 | Painel administrativo | Próxima |
 | 13 | Cache Redis no catálogo | Pendente |
 | 14 | Dashboard de métricas | Pendente |
 
-Progresso: 11 de 14 fases. 80 testes automatizados, todos verdes.
+Progresso: 12 de 14 fases. 89 testes automatizados, todos verdes.
 
 ---
 
@@ -327,6 +327,42 @@ Decisões:
 
 ---
 
+### Fase 11 — Pagamento com cartão (Stripe)
+
+Endpoints:
+- `POST /payments/card?orderId=...` — 201, dono ou ADMIN
+- `POST /webhooks/stripe` — 200, público (exige header `Stripe-Signature`)
+
+Testes: 9, todos passando
+- `deveCriarPaymentIntent`
+- `naoDeveCriarSemToken` → 401
+- `deveRetornar404` → pedido inexistente
+- `naoDevePagarPedidoDeOutroUsuario` → 403
+- `naoDevePagarPedidoJaPago` → 400
+- `webhookDeveConfirmarPagamento`
+- `webhookSemAssinaturaDeveFalhar` → 400
+- `webhookDuplicadoNaoDeveRepagar` — idempotência
+- `donoBuscaPaymentIntent`
+
+Implementação:
+- `service/PaymentGateway.java` — interface comum (`createIntent`)
+- `service/StripePaymentGateway.java` — implementação mock determinística
+- `service/PaymentService.java` — métodos `createCard` e `handleGatewayWebhook`
+- `controller/WebhookController.java` — endpoint público `/webhooks/stripe`
+- `domain/Payment.java` — campos `gatewayRef` e `clientSecret`
+- `dto/PaymentResponse.java` — expõe os campos novos
+- `repository/PaymentRepository.java` — `findByGatewayRef`
+- Migration `V9__alter_payments_add_gateway_fields.sql`
+
+Decisões:
+- Idempotência no webhook: pagamento já `CONFIRMED` retorna 200 sem reprocessar
+- `PaymentGateway` como interface permite trocar por Mercado Pago ou PagSeguro sem alterar o controller
+- `gatewayRef` indexado — conciliação rápida em produção
+- `clientSecret` nunca é logado
+- Endpoint de webhook é público mas exige o header de assinatura
+
+---
+
 ## Estrutura do projeto
 
 ```
@@ -349,13 +385,13 @@ loja-api/
     │   ├── java/com/alvescosta/loja/
     │   │   ├── LojaApplication.java
     │   │   ├── config/SecurityConfig.java
-    │   │   ├── domain/          (13 arquivos: entidades e enums)
+    │   │   ├── domain/          (14 arquivos: entidades e enums)
     │   │   ├── dto/             (19 records)
     │   │   ├── exception/       (4 arquivos)
     │   │   ├── repository/      (6 interfaces JPA)
     │   │   ├── security/        (4 arquivos)
-    │   │   ├── service/         (9 serviços)
-    │   │   └── controller/      (8 controllers)
+    │   │   ├── service/         (11 serviços)
+    │   │   └── controller/      (9 controllers)
     │   └── resources/
     │       ├── application.yml
     │       └── db/migration/
@@ -366,7 +402,8 @@ loja-api/
     │           ├── V5__create_coupons.sql
     │           ├── V6__alter_orders_add_coupon.sql
     │           ├── V7__alter_orders_add_shipping.sql
-    │           └── V8__create_payments.sql
+    │           ├── V8__create_payments.sql
+    │           └── V9__alter_payments_add_gateway_fields.sql
     └── test/
         ├── java/com/alvescosta/loja/
         │   ├── auth/AuthControllerTest.java             (6 testes)
@@ -376,52 +413,55 @@ loja-api/
         │   ├── orders/OrderControllerTest.java          (17 testes)
         │   ├── coupons/CouponControllerTest.java        (12 testes)
         │   ├── shipping/ShippingControllerTest.java     (6 testes)
-        │   └── payments/PaymentControllerTest.java      (8 testes)
+        │   ├── payments/PaymentControllerTest.java      (8 testes)
+        │   └── payments/CardPaymentControllerTest.java  (9 testes)
         └── resources/application-test.yml
 ```
 
-Total: 65 arquivos de produção, 8 classes de teste, 80 testes.
+Total: 68 arquivos de produção, 9 classes de teste, 89 testes.
 
 ---
 
-## Próxima fase — Fase 11: Pagamento com cartão (Stripe)
+## Próxima fase — Fase 12: Painel administrativo
 
 ### Objetivo
 
-Adicionar suporte a cartão de crédito reaproveitando a estrutura da Fase 10.
-Criar `PaymentIntent` com `clientSecret`, receber webhook de confirmação e
-transicionar pedido para `PAID`. Interface `PaymentGateway` permite trocar
-PIX por Stripe sem alterar o controller.
+Expor endpoints exclusivos para ADMIN com visão agregada da loja: pedidos de
+todos os clientes, usuários com total gasto, produtos com estoque baixo e
+capacidade de repor estoque.
 
-### Testes (RED) — `CardPaymentControllerTest`
+### Testes (RED) — `AdminControllerTest` (~12)
 
-- `naoDeveCriarSemToken` → 401
-- `deveCriarPaymentIntent` → 201 com `clientSecret` e `gatewayRef`
-- `deveRetornar404` → pedido inexistente
-- `naoDevePagarPedidoDeOutroUsuario` → 403
-- `naoDevePagarPedidoJaPago` → 400
-- `webhookDeveConfirmarPagamento` → 200 e pedido vira `PAID`
-- `webhookSemAssinaturaDeveFalhar` → 400
-- `webhookDuplicadoNaoDeveRepagar` → idempotência
-- `donoBuscaPaymentIntent` → 200
+- 401 sem token
+- 403 quando CUSTOMER tenta acessar qualquer rota admin
+- `GET /admin/dashboard` — totais do período (vendas, ticket médio, nº pedidos)
+- `GET /admin/orders` — todos os pedidos, com filtros por status e período
+- `GET /admin/users` — clientes com total gasto e nº de pedidos
+- `PATCH /admin/users/{id}/role` — promove CUSTOMER para ADMIN
+- `PATCH` não permite rebaixar a si mesmo (evita lockout)
+- `GET /admin/products/low-stock?threshold=5` — produtos com estoque abaixo do limite
+- `POST /admin/products/{id}/restock` — incrementa estoque
 
 ### Implementação (GREEN)
 
-- `service/PaymentGateway.java` — interface comum
-- `service/StripePaymentGateway.java` — mock determinístico
-- `controller/WebhookController.java` — endpoint público `/webhooks/stripe`
-- Migration `V9__alter_payments_add_gateway_fields.sql` com `gateway_ref` e `client_secret`
+- `controller/AdminController.java`
+- `service/AdminService.java`
+- `dto/DashboardResponse.java`
+- `dto/AdminOrderResponse.java`
+- `dto/AdminUserResponse.java`
+- `dto/RestockRequest.java`
+- `dto/UpdateRoleRequest.java`
+- Queries agregadas em `OrderRepository` e `UserRepository` com `@Query`
 
 ### Refactor
 
-- `PaymentService` escolhe gateway conforme `PaymentMethod`
-- Rate limit no endpoint de webhook
+- Considerar projeções JPA para evitar N+1 no dashboard
 
 ### Critérios de conclusão
 
 - `./mvnw clean test` com sucesso
-- Cerca de 10 testes novos passando
-- Webhook idempotente coberto por teste dedicado
+- Cerca de 12 testes novos passando
+- Dashboard sem consultas N+1
 
 ---
 
@@ -447,6 +487,8 @@ PIX por Stripe sem alterar o controller.
 | `pixQrCodeBase64` como TEXT | Imagem em base64 não cabe em `VARCHAR(255)` |
 | `PixGenerator` como mock | Isola regra de negócio do gateway externo |
 | Expiração do Pix | Evita QR Code "zumbi" |
+| `PaymentGateway` como interface | Trocar PIX/Stripe/Mercado Pago sem alterar controller |
+| Idempotência no webhook | Stripe reenvia em timeout; pagamento já `CONFIRMED` não reprocessa |
 
 ---
 
