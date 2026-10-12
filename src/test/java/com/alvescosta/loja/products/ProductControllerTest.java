@@ -37,12 +37,14 @@ class ProductControllerTest {
     @Autowired UserRepository userRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired JwtService jwtService;
+    @Autowired org.springframework.cache.CacheManager cacheManager;
 
     private String adminToken;
     private String customerToken;
 
     @BeforeEach
     void setup() {
+        cacheManager.getCacheNames().forEach(name -> cacheManager.getCache(name).clear());
         productRepository.deleteAll();
         userRepository.deleteAll();
 

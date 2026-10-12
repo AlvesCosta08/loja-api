@@ -6,6 +6,8 @@ import com.alvescosta.loja.dto.ProductResponse;
 import com.alvescosta.loja.exception.NotFoundException;
 import com.alvescosta.loja.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
+    @CacheEvict(value = {"products", "productLists"}, allEntries = true)
     @Transactional
     public ProductResponse create(ProductRequest request) {
         Product p = Product.builder()
@@ -29,11 +32,14 @@ public class ProductService {
         return ProductResponse.from(productRepository.save(p));
     }
 
+    @Cacheable(value = "products", key = "#id")
     @Transactional(readOnly = true)
     public ProductResponse findById(Long id) {
         return ProductResponse.from(getOrThrow(id));
     }
 
+    @Cacheable(value = "productLists",
+            key = "#category + '|' + #search + '|' + #pageable.pageNumber + '|' + #pageable.pageSize")
     @Transactional(readOnly = true)
     public Page<ProductResponse> list(String category, String search, Pageable pageable) {
         boolean hasCategory = category != null && !category.isBlank();
@@ -54,6 +60,7 @@ public class ProductService {
         return page.map(ProductResponse::from);
     }
 
+    @CacheEvict(value = {"products", "productLists"}, allEntries = true)
     @Transactional
     public ProductResponse update(Long id, ProductRequest request) {
         Product p = getOrThrow(id);
@@ -65,6 +72,7 @@ public class ProductService {
         return ProductResponse.from(productRepository.save(p));
     }
 
+    @CacheEvict(value = {"products", "productLists"}, allEntries = true)
     @Transactional
     public void delete(Long id) {
         Product p = getOrThrow(id);

@@ -10,6 +10,8 @@ spring:
     open-in-view: false
   flyway:
     enabled: false
+  cache:
+    type: simple
 
 jwt:
   secret: test-secret-key-with-at-least-32-chars-ok
