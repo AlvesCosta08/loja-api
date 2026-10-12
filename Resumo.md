@@ -7,6 +7,8 @@ Atualizado ao final de cada fase concluída.
 
 ## Informações gerais
 
+### Backend
+
 | Campo | Valor |
 |-------|-------|
 | Projeto | loja-api |
@@ -24,24 +26,60 @@ Atualizado ao final de cada fase concluída.
 | Build | Maven |
 | Boilerplate | Lombok |
 | Pacote base | `com.alvescosta.loja` |
-| Repositório | https://github.com/AlvesCosta08/loja-api |
+| Repositório backend | https://github.com/AlvesCosta08/loja-api |
+| Última atualização backend | Fase 14 — Dashboard de métricas |
+
+### Frontend
+
+| Campo | Valor |
+|-------|-------|
+| Projeto | loja-web |
+| Descrição | SPA de e-commerce que consome a `loja-api` |
+| Framework | Angular 19 (standalone components) |
+| Linguagem | TypeScript 5.6 |
+| Estilização | Tailwind CSS 4 |
+| Estado | Angular Signals + Services |
+| HTTP | `HttpClient` + `HttpInterceptor` (JWT) |
+| Rotas | `CanActivate` (cliente) + `CanMatch` (admin) |
+| Formulários | Reactive Forms |
+| Testes | Jasmine + Karma (unit) + Cypress (E2E) |
+| Build | Angular CLI 19 |
+| Deploy previsto | Vercel / Netlify |
+| Repositório frontend | https://github.com/AlvesCosta08/loja-web *(a criar)* |
+| Última atualização frontend | Setup inicial |
+
+### Autor
+
+| Campo | Valor |
+|-------|-------|
 | Autor | Alves Costa |
-| Última atualização | Fase 14 — Dashboard de métricas |
+| GitHub | https://github.com/AlvesCosta08 |
+| Timezone | America/Fortaleza |
 
 ---
 
-## Status
+## Status geral
+
+### Backend
 
 **Roadmap completo: 14 de 14 fases concluídas.**
 
 116 testes automatizados, todos verdes.
 77 arquivos de produção, 12 classes de teste, 9 migrations Flyway.
 
+### Frontend
+
+**Roadmap: 0 de 10 fases concluídas.**
+
+Projeto a iniciar. Stack: Angular 19 + Tailwind CSS 4.
+
 ---
 
-## Objetivo
+## Objetivo do projeto
 
-Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
+Construir um e-commerce full-stack cobrindo:
+
+**Backend** (concluído)
 
 - Autenticação e autorização com JWT e roles
 - Catálogo de produtos com filtros e paginação
@@ -51,9 +89,21 @@ Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
 - Cupons, frete e painel administrativo
 - Cache com Redis e dashboard de métricas
 
+**Frontend** (a construir)
+
+- Autenticação com JWT (login, cadastro, guard de rotas)
+- Vitrine de produtos com busca, filtros e paginação
+- Página de detalhe com add ao carrinho
+- Carrinho persistente com atualização de quantidade
+- Checkout completo (endereço, cupom, frete, pagamento)
+- Histórico de pedidos
+- Pagamento Pix (QR Code) e cartão
+- Painel admin (produtos, pedidos, usuários, dashboard)
+- Design responsivo (mobile-first)
+
 ---
 
-## Roadmap
+## Roadmap — Backend
 
 | # | Fase | Status |
 |---|------|--------|
@@ -75,28 +125,35 @@ Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
 
 ---
 
-## Fases concluídas
+## Roadmap — Frontend
+
+| # | Fase | Status |
+|---|------|--------|
+| 0 | Setup Angular + CORS no backend + layout base | Pendente |
+| 1 | Roteamento + guards + interceptor JWT | Pendente |
+| 2 | Autenticação (login, cadastro, `/users/me`) | Pendente |
+| 3 | Catálogo de produtos (lista, busca, filtros, paginação) | Pendente |
+| 4 | Detalhe do produto + adicionar ao carrinho | Pendente |
+| 5 | Carrinho (add, update, remove, total) | Pendente |
+| 6 | Checkout (endereço, cupom, frete, criação de pedido) | Pendente |
+| 7 | Pagamento (Pix com QR, cartão com Stripe) | Pendente |
+| 8 | Meus pedidos (lista + detalhe) | Pendente |
+| 9 | Painel admin (produtos, pedidos, usuários, dashboard) | Pendente |
+| 10 | Deploy + integração com backend em produção | Pendente |
+
+---
+
+## Fases concluídas — Backend
 
 ### Fase 0 — Setup
 
-Estrutura de pacotes criada em `com.alvescosta.loja`:
-
-```
-config/       → SecurityConfig
-domain/       → entidades JPA
-dto/          → records de request/response
-exception/    → exceções customizadas e handler global
-repository/   → interfaces Spring Data JPA
-security/     → JwtService, JwtAuthFilter, UserDetails
-service/      → regras de negócio
-controller/   → endpoints REST
-```
+Estrutura de pacotes em `com.alvescosta.loja`: `config`, `domain`, `dto`, `exception`, `repository`, `security`, `service`, `controller`.
 
 Configuração:
 
 - `pom.xml` com Spring Boot 3.4 e Java 21
-- Dependências: Web, Security, Data JPA, Validation, Actuator, Flyway, JJWT 0.12.6, PostgreSQL, H2 (testes), Lombok
-- `application.yml` (produção) e `application-test.yml` (H2 em memória)
+- Dependências: Web, Security, Data JPA, Cache, Redis, Validation, Actuator, Micrometer Prometheus, Flyway, JJWT 0.12.6, PostgreSQL, H2 (testes), Lombok
+- `application.yml` (produção) e `application-test.yml` (perfil de teste)
 - `@EnableMethodSecurity` habilitado
 
 Ambiente local:
@@ -112,22 +169,8 @@ Ambiente local:
 Endpoints:
 - `POST /auth/register` → 201
 
-Testes: 3, todos passando
-- `deveRegistrarUsuarioComSucesso`
-- `naoDeveRegistrarEmailDuplicado`
-- `naoDeveAceitarSenhaCurta`
-
-Implementação:
-- `domain/User.java`, `domain/Role.java`
-- `dto/UserCreateRequest.java` com Bean Validation
-- `dto/UserResponse.java` sem expor senha
-- `repository/UserRepository.existsByEmail()`
-- `service/UserService.register()` com BCrypt
-- `controller/AuthController.register()`
-- `exception/GlobalExceptionHandler`
-
-Refactor:
-- Tratamento de erros centralizado com `@RestControllerAdvice`
+Testes: 3
+Implementação: `domain/User`, `domain/Role`, `dto/UserCreateRequest` com Bean Validation, `dto/UserResponse` sem senha, `UserService.register()` com BCrypt, `AuthController`, `GlobalExceptionHandler`.
 
 ---
 
@@ -136,22 +179,8 @@ Refactor:
 Endpoints:
 - `POST /auth/login` → 200 com `access_token`
 
-Testes: 3, todos passando
-- `deveLogarERetornarToken`
-- `deveRejeitarSenhaErrada` → 401
-- `naoDeveLogarUsuarioInexistente` → 401
-
-Implementação:
-- `security/JwtService.java` com `generate`, `extractUserId`, `getExpirationMs`
-- `service/UserService.authenticate()` com `PasswordEncoder.matches()`
-- `dto/LoginRequest.java`, `dto/TokenResponse.java`
-- `controller/AuthController.login()`
-- `exception/UnauthorizedException.java`
-
-Refactor:
-- `jwt.secret` e `jwt.expiration-ms` externalizados em `application.yml`
-- `jwt.secret` aceita variável de ambiente `JWT_SECRET`
-- `UnauthorizedException` mapeada para 401 no handler global
+Testes: 3
+Implementação: `JwtService` com HS256, `UserService.authenticate()`, `LoginRequest`, `TokenResponse`, `UnauthorizedException`. Parâmetros do JWT externalizados em `application.yml`.
 
 ---
 
@@ -160,392 +189,249 @@ Refactor:
 Endpoints:
 - `GET /users/me` → 200
 
-Testes: 3, todos passando
-- `deveRetornar401SemToken`
-- `deveRetornar401ComTokenInvalido`
-- `deveRetornarDadosDoUsuarioLogado`
-
-Implementação:
-- `security/JwtAuthFilter.java` — valida Bearer e popula o `SecurityContext`
-- `security/UserDetailsServiceImpl.java` — username é o ID do usuário
-- `security/RestAuthenticationEntryPoint.java` — responde 401 em vez de 403 default
-- `config/SecurityConfig.java` — sessão stateless, CSRF desabilitado, filtro JWT registrado antes do filtro padrão do Spring
-- `controller/UserController.me()` com `@AuthenticationPrincipal`
+Testes: 3
+Implementação: `JwtAuthFilter`, `UserDetailsServiceImpl` (username = ID), `RestAuthenticationEntryPoint` (401 em vez de 403), `UserController.me()`.
 
 ---
 
 ### Fase 4 — CRUD de Produtos
 
 Endpoints:
-- `GET /products` — lista paginada com `category` e `search`
-- `GET /products/{id}` — detalhes ou 404
-- `POST /products` — 201, requer role ADMIN
-- `PUT /products/{id}` — 200, requer role ADMIN
-- `DELETE /products/{id}` — 204, requer role ADMIN
+- `GET /products` (paginado, filtros `category` e `search`)
+- `GET /products/{id}`
+- `POST /products` (ADMIN)
+- `PUT /products/{id}` (ADMIN)
+- `DELETE /products/{id}` (ADMIN)
 
-Testes: 14, todos passando
-
-Implementação:
-- `domain/Product.java` com `BigDecimal` para preço
-- `dto/ProductRequest.java`, `dto/ProductResponse.java`
-- `repository/ProductRepository.java` com métodos derivados de filtro
-- `service/ProductService.java`
-- `controller/ProductController.java` com `@PreAuthorize("hasRole('ADMIN')")` em escrita
-- `@PageableDefault(size = 10, sort = "name")` na listagem
-
-Refactor:
-- `@EnableMethodSecurity` no `SecurityConfig`
-- Helper `getOrThrow(id)` para evitar duplicação
+Testes: 14
+Implementação: `Product` com `BigDecimal`, `ProductService`, `ProductController` com `@PreAuthorize`, `@PageableDefault(size=10, sort="name")`.
 
 ---
 
 ### Fase 6 — Carrinho de Compras
 
 Endpoints:
-- `POST /cart/items` — 201
-- `GET /cart` — 200
-- `PUT /cart/items/{id}` — 200
-- `DELETE /cart/items/{id}` — 204
-- `DELETE /cart` — 204
+- `POST /cart/items`, `GET /cart`, `PUT /cart/items/{id}`, `DELETE /cart/items/{id}`, `DELETE /cart`
 
-Testes: 14, todos passando
-
-Implementação:
-- `domain/CartItem.java` com `@ManyToOne` para `User` e `Product`
-- Restrição única `(user_id, product_id)` e `@Min(1)` na quantidade
-- `@OnDelete(CASCADE)` nas duas FKs
-- `dto/AddToCartRequest.java`, `UpdateCartItemRequest.java`, `CartItemResponse.java`, `CartResponse.java`
-- `repository/CartItemRepository.java`
-- `service/CartService.java` com `addItem`, `getCart`, `updateQuantity`, `removeItem`, `clearCart`
-- `service/CartCalculator.java` para cálculo de total
-- `controller/CartController.java`
-
-Refactor:
-- `@Transactional` em escrita, `@Transactional(readOnly = true)` em leitura
-- `CHECK (quantity >= 1)` no banco
-- Mapeamento centralizado em `CartItemResponse.from(CartItem)`
+Testes: 14
+Implementação: `CartItem` com unique `(user_id, product_id)`, `@OnDelete(CASCADE)`, `CartService`, `CartCalculator`, `CartController`.
 
 ---
 
 ### Fase 7 — Checkout e Pedidos
 
 Endpoints:
-- `POST /orders` — 201
-- `GET /orders` — 200, apenas do usuário logado
-- `GET /orders/{id}` — 200 (dono ou ADMIN), 403 caso contrário
-- `PATCH /orders/{id}/status` — 200, requer ADMIN
+- `POST /orders`, `GET /orders`, `GET /orders/{id}`, `PATCH /orders/{id}/status`
 
-Testes: 12, todos passando
-
-Implementação:
-- `domain/OrderStatus.java`
-- `domain/Order.java` com cascade em `user`, campos `discount`, `couponCode`, `shippingCost`
-- `domain/OrderItem.java` com snapshot de `productName` e `unitPrice`
-- `dto/OrderResponse.java`, `OrderItemResponse.java`, `UpdateOrderStatusRequest.java`
-- `repository/OrderRepository.java`
-- `service/OrderService.java`
-- `controller/OrderController.java`
-
-Decisões:
-- Snapshot de preços em `OrderItem`: pedido antigo mantém valor histórico mesmo se o produto mudar
-- Validação de estoque antes de qualquer mutação
-- Decremento de estoque no checkout, não no pagamento
-- `@OnDelete(SET_NULL)` em `OrderItem.product` para preservar histórico
+Testes: 12
+Implementação: `Order`, `OrderItem` com snapshot de `productName` e `unitPrice`, `OrderStatus`, `OrderService` validando estoque antes de mutar.
 
 ---
 
 ### Fase 8 — Cupons de Desconto
 
 Endpoints:
-- `POST /coupons` — 201, requer ADMIN
-- `GET /coupons/{code}` — 200, público
+- `POST /coupons` (ADMIN), `GET /coupons/{code}`
 
-Testes: 12, todos passando
-
-Implementação:
-- `domain/DiscountType.java` com `PERCENTAGE` e `FIXED`
-- `domain/Coupon.java` — coluna SQL `discount_value` porque `value` é palavra reservada
-- `dto/CouponRequest.java`, `CouponResponse.java`
-- `repository/CouponRepository.java`
-- `service/CouponService.java` com validação de expiração, limite de usos e valor mínimo
-- `controller/CouponController.java`
-- `OrderService.checkout()` passa a aceitar `couponCode` opcional
-
-Decisões:
-- `usageCount` incrementado somente após sucesso — falha não consome cupom
-- `expiresAt` em `Instant` (UTC)
-- `minOrderValue` e `maxUses` opcionais
-- Aplicação do cupom no checkout, não no carrinho
+Testes: 12
+Implementação: `Coupon` com coluna `discount_value` (`value` é palavra reservada), `CouponService` com validação de expiração, limite e valor mínimo.
 
 ---
 
 ### Fase 9 — Cálculo de Frete
 
 Endpoints:
-- `POST /shipping/quote` — 200, público
-- `POST /orders?cep=...` — 201 com frete aplicado
+- `POST /shipping/quote`, `POST /orders?cep=...`
 
-Testes: 10, todos passando
-
-Implementação:
-- `domain/ShippingType.java` com `STANDARD` e `EXPRESS`
-- `dto/ShippingQuoteRequest.java`, `ShippingOption.java`, `ShippingQuoteResponse.java`
-- `service/ShippingService.java`
-- `controller/ShippingController.java`
-- Campo `shippingCost` em `Order` e em `OrderResponse`
-- `OrderService.checkout(userId, couponCode, cep)`
-- Migration `V7__alter_orders_add_shipping.sql`
-
-Tabela de preços por prefixo de CEP:
-- `0`, `1` → São Paulo: STANDARD R$ 10, EXPRESS R$ 20
-- `2`, `3` → Rio de Janeiro / Espírito Santo: STANDARD R$ 15, EXPRESS R$ 30
-- Outros → STANDARD R$ 20, EXPRESS R$ 40
-
-Regras:
-- STANDARD gratuito se subtotal ≥ R$ 200
-- EXPRESS nunca gratuito
-- Fórmula: `total = subtotal − discount + shippingCost`
-- Frete opcional: sem parâmetro `cep`, `shippingCost` fica em zero
+Testes: 10
+Implementação: `ShippingService` com tabela por prefixo de CEP, frete grátis acima de R$ 200.
 
 ---
 
 ### Fase 10 — Pagamento Pix
 
 Endpoints:
-- `POST /payments?orderId=...` — 201, dono ou ADMIN
-- `GET /payments/{id}` — 200, dono ou ADMIN
-- `POST /payments/{id}/confirm` — 200, requer ADMIN
+- `POST /payments?orderId=...`, `GET /payments/{id}`, `POST /payments/{id}/confirm`
 
-Testes: 8, todos passando
-
-Implementação:
-- `domain/PaymentMethod.java` com `PIX` e `CREDIT_CARD`
-- `domain/PaymentStatus.java` com `PENDING`, `CONFIRMED`, `FAILED`, `EXPIRED`
-- `domain/Payment.java` com cascade em `order`
-- `dto/PaymentResponse.java`
-- `repository/PaymentRepository.java`
-- `service/PixGenerator.java` — payload EMV mock e QR em base64
-- `service/PaymentService.java`
-- `controller/PaymentController.java`
-- Migration `V8__create_payments.sql`
-
-Decisões:
-- `pixQrCodeBase64` como coluna TEXT
-- Expiração do Pix em 30 minutos
-- Pedido transiciona para `PAID` apenas após confirmação administrativa
-- `PixGenerator` é mock determinístico. Em produção vira chamada HTTP ao PSP.
+Testes: 8
+Implementação: `Payment`, `PaymentMethod`, `PaymentStatus`, `PixGenerator` (mock EMV + QR), `PaymentService`.
 
 ---
 
 ### Fase 11 — Pagamento com cartão (Stripe)
 
 Endpoints:
-- `POST /payments/card?orderId=...` — 201, dono ou ADMIN
-- `POST /webhooks/stripe` — 200, público (exige header `Stripe-Signature`)
+- `POST /payments/card?orderId=...`, `POST /webhooks/stripe`
 
-Testes: 9, todos passando
-- `deveCriarPaymentIntent`
-- `naoDeveCriarSemToken` → 401
-- `deveRetornar404` → pedido inexistente
-- `naoDevePagarPedidoDeOutroUsuario` → 403
-- `naoDevePagarPedidoJaPago` → 400
-- `webhookDeveConfirmarPagamento`
-- `webhookSemAssinaturaDeveFalhar` → 400
-- `webhookDuplicadoNaoDeveRepagar` — idempotência
-- `donoBuscaPaymentIntent`
-
-Implementação:
-- `service/PaymentGateway.java` — interface comum (`createIntent`)
-- `service/StripePaymentGateway.java` — implementação mock determinística
-- `service/PaymentService.java` — métodos `createCard` e `handleGatewayWebhook`
-- `controller/WebhookController.java` — endpoint público `/webhooks/stripe`
-- `domain/Payment.java` — campos `gatewayRef` e `clientSecret`
-- `dto/PaymentResponse.java` — expõe os campos novos
-- `repository/PaymentRepository.java` — `findByGatewayRef`
-- Migration `V9__alter_payments_add_gateway_fields.sql`
-
-Decisões:
-- Idempotência no webhook: pagamento já `CONFIRMED` retorna 200 sem reprocessar
-- `PaymentGateway` como interface permite trocar por Mercado Pago ou PagSeguro sem alterar o controller
-- `gatewayRef` indexado — conciliação rápida em produção
-- `clientSecret` nunca é logado
-- Endpoint de webhook é público mas exige o header de assinatura
+Testes: 9
+Implementação: `PaymentGateway` (interface), `StripePaymentGateway` (mock), `WebhookController`, idempotência no webhook.
 
 ---
 
 ### Fase 12 — Painel administrativo
 
-Endpoints (todos com `@PreAuthorize("hasRole('ADMIN')")`):
-- `GET /admin/dashboard` — totais de vendas, ticket médio, nº de pedidos
-- `GET /admin/orders` — todos os pedidos, paginado
-- `GET /admin/users` — clientes com total gasto e contagem de pedidos
-- `PATCH /admin/users/{id}/role` — promove/rebaixa usuário
-- `GET /admin/products/low-stock?threshold=5` — produtos com estoque abaixo do limite
-- `POST /admin/products/{id}/restock` — incrementa estoque
+Endpoints (todos ADMIN):
+- `GET /admin/dashboard`, `GET /admin/orders`, `GET /admin/users`, `PATCH /admin/users/{id}/role`, `GET /admin/products/low-stock`, `POST /admin/products/{id}/restock`
 
-Testes: 12, todos passando
-- Autorização: `deveRetornar401SemToken`, `clienteNaoPodeAcessarDashboard`, `clienteNaoPodeListarUsuarios`
-- Dashboard: `dashboardZerado`, `dashboardComPedidos`
-- Listagens: `adminListaTodosOsPedidos`, `adminListaUsuariosComTotalGasto`
-- Roles: `adminDevePromoverUsuario`, `adminNaoPodeRebaixarASiMesmo`
-- Estoque: `deveListarProdutosComEstoqueBaixo`, `adminDeveReporEstoque`, `deveRetornar404AoReporProdutoInexistente`
-
-Implementação:
-- `controller/AdminController.java` com `@PreAuthorize` na classe
-- `service/AdminService.java`
-- DTOs: `DashboardResponse`, `AdminUserResponse`, `UpdateRoleRequest`, `RestockRequest`
-- Queries agregadas em `OrderRepository` com `@Query`
-- `ProductRepository.findByStockLessThanEqualOrderByStockAsc`
-
-Decisões:
-- Guarda-corpo: ADMIN não pode alterar a própria role (evita lockout)
-- `/admin/users` retorna lista simples (lojas pequenas); `/admin/orders` é paginado (cresce muito)
-- Queries agregadas via `@Query` para evitar N+1 no dashboard
-- `@PreAuthorize` na classe — todos os métodos herdam a restrição
+Testes: 12
+Implementação: `AdminService`, queries agregadas com `@Query`, guarda-corpo contra auto-rebaixamento.
 
 ---
 
 ### Fase 13 — Cache Redis no catálogo
 
-Endpoints afetados (mesma API, comportamento idêntico):
-- `GET /products/{id}` — cacheado por `id`
-- `GET /products` — cacheado por combinação de filtros + paginação
-- `POST/PUT/DELETE /products` — invalidam os dois caches
+Comportamento idêntico ao anterior; ganho de performance em consultas repetidas.
 
-Testes: 8, todos passando
-- `primeiraChamadaConsultaBanco`
-- `segundaChamadaUsaCache`
-- `cacheRetornaDadosCorretos`
-- `updateInvalidaCache`
-- `deleteLimpaCache`
-- `listagemCacheadaPorFiltros`
-- `listagemVaziaTambemCacheada`
-- `cachesConfiguradosExistem`
-
-Implementação:
-- `spring-boot-starter-cache` (abstração) + `spring-boot-starter-data-redis` (backend)
-- `config/CacheConfig.java` com `@EnableCaching`
-- `@EnableCaching` também na classe `LojaApplication`
-- `application.yml`: `spring.cache.type=redis`, TTL de 5 minutos
-- `application-test.yml`: `spring.cache.type=simple`
-- `ProductService`:
-  - `@Cacheable("products", key = "#id")` em `findById`
-  - `@Cacheable("productLists", key = "categoria|search|page|size")` em `list`
-  - `@CacheEvict(value = {"products", "productLists"}, allEntries = true)` em `create`/`update`/`delete`
-- `docker-compose.yml` com PostgreSQL e Redis
-
-Decisões:
-- Dois caches separados (`products`, `productLists`) — invalidação independente
-- `@CacheEvict(allEntries = true)` na escrita
-- `spring-boot-starter-cache` é obrigatório mesmo com Redis
-- Testes limpam cache no `@BeforeEach`
+Testes: 8
+Implementação: `spring-boot-starter-cache` + `spring-boot-starter-data-redis`, `CacheConfig` com `@EnableCaching`, `@Cacheable` em `findById` e `list`, `@CacheEvict` em `create`/`update`/`delete`, dois caches separados (`products`, `productLists`).
 
 ---
 
 ### Fase 14 — Dashboard de métricas
 
 Endpoints Actuator:
-- `GET /actuator/health` → público
-- `GET /actuator/info` → público
-- `GET /actuator/metrics` → autenticado
-- `GET /actuator/prometheus` → autenticado
+- `GET /actuator/health` (público)
+- `GET /actuator/info` (público)
+- `GET /actuator/metrics` (autenticado)
+- `GET /actuator/prometheus` (autenticado)
 
 Métricas customizadas:
-- `loja.orders.created` — incrementa em cada checkout bem-sucedido
+- `loja.orders.created` — incrementa em cada checkout
 - `loja.payments.confirmed` — incrementa em cada confirmação de pagamento
 
-Testes: 7, todos passando
-- `healthPublico` — 200 sem token
-- `infoPublico` — 200 sem token
-- `metricsExigeAutenticacao` — 401 sem token
-- `metricsComAdmin` — 200 com token ADMIN
-- `contadorPedidosIncrementa` — `loja.orders.created` +1 após checkout
-- `contadorPagamentosIncrementa` — `loja.payments.confirmed` +1 após confirmação
-- `metricaPedidosExposta` — `/actuator/metrics/loja.orders.created` retorna 200 com valor correto
-
-Implementação:
-- `micrometer-registry-prometheus` no `pom.xml`
-- `config/PrometheusMetricsConfig.java` — `PrometheusMeterRegistry` explícito (contorna bug de auto-config do Spring Boot 3.4 + Micrometer 1.14 quando há injeção precoce do `MeterRegistry`)
-- `service/MetricsService.java` — `Counter` para pedidos criados e pagamentos confirmados
-- `OrderService.checkout()` chama `metricsService.orderCreated()`
-- `PaymentService.confirm()` e `handleGatewayWebhook()` chamam `metricsService.paymentConfirmed()`
-- `application.yml` e `application-test.yml`: `management.endpoints.web.exposure.include=health,info,metrics,prometheus`
-- `application-test.yml`: `management.health.redis.enabled=false` — Redis não é dependência dos testes
-- `SecurityConfig`: `/actuator/health` e `/actuator/info` públicos; restante do Actuator autenticado
-
-Decisões:
-- Métricas **de negócio** (pedidos, pagamentos), não só de infraestrutura (JVM, HTTP)
-- `MetricsService` centraliza criação dos contadores — sem espalhar `MeterRegistry` pelos serviços
-- `PrometheusMetricsConfig` explícito porque a auto-config do Micrometer 1.14 + Spring Boot 3.4 falha silenciosamente em alguns cenários
-- Testes de métricas usam `MeterRegistry.find(nome).counter()` direto — mais estável que scrape HTTP
-- `/actuator/prometheus` fica exposto mas o teste cobre o caminho `/actuator/metrics` (mais determinístico)
+Testes: 7
+Implementação: `Micrometer + Prometheus`, `MetricsService` com contadores, `PrometheusMetricsConfig` (contorna bug de auto-config do Spring Boot 3.4 quando há injeção precoce do `MeterRegistry`), instrumentação em `OrderService` e `PaymentService`.
 
 ---
 
-## Estrutura final do projeto
+## Fases concluídas — Frontend
+
+*(Nenhuma ainda. Primeira fase prevista: Setup Angular + CORS no backend.)*
+
+---
+
+## Pré-requisitos para iniciar o frontend
+
+Antes da Fase 0 do frontend, é necessário:
+
+1. **Configurar CORS no backend** — hoje o `SecurityConfig` não permite requisições de `http://localhost:4200`. Será adicionado um `CorsConfig` no backend.
+2. **Node.js instalado** — versão 20 LTS ou superior (`node --version`).
+3. **Angular CLI instalado globalmente** — `npm install -g @angular/cli@19`.
+4. **Definir estratégia de autenticação** — `localStorage` para o JWT (simples) ou cookies httpOnly (mais seguro, exige mais ajustes).
+
+---
+
+## Estrutura prevista do projeto frontend
 
 ```
-loja-api/
-├── pom.xml
-├── README.md
-├── CHANGELOG.md
-├── Resumo.md
-├── LICENSE
-├── docker-compose.yml
-├── .editorconfig
-├── .gitattributes
-├── .env.example
-├── .github/
-│   ├── workflows/ci.yml
-│   ├── dependabot.yml
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── ISSUE_TEMPLATE/
+loja-web/
+├── package.json
+├── angular.json
+├── tsconfig.json
+├── tailwind.config.js
+├── .env
+├── .gitignore
 └── src/
-    ├── main/
-    │   ├── java/com/alvescosta/loja/
-    │   │   ├── LojaApplication.java
-    │   │   ├── config/          (SecurityConfig, CacheConfig, PrometheusMetricsConfig)
-    │   │   ├── domain/          (14 arquivos: entidades e enums)
-    │   │   ├── dto/             (23 records)
-    │   │   ├── exception/       (4 arquivos)
-    │   │   ├── repository/      (6 interfaces JPA)
-    │   │   ├── security/        (4 arquivos)
-    │   │   ├── service/         (14 serviços, incluindo MetricsService)
-    │   │   └── controller/      (10 controllers, incluindo WebhookController)
-    │   └── resources/
-    │       ├── application.yml
-    │       └── db/migration/
-    │           ├── V1__create_users.sql
-    │           ├── V2__create_products.sql
-    │           ├── V3__create_cart_items.sql
-    │           ├── V4__create_orders.sql
-    │           ├── V5__create_coupons.sql
-    │           ├── V6__alter_orders_add_coupon.sql
-    │           ├── V7__alter_orders_add_shipping.sql
-    │           ├── V8__create_payments.sql
-    │           └── V9__alter_payments_add_gateway_fields.sql
-    └── test/
-        ├── java/com/alvescosta/loja/
-        │   ├── auth/AuthControllerTest.java             (6 testes)
-        │   ├── users/UserControllerTest.java            (3 testes)
-        │   ├── products/ProductControllerTest.java      (14 testes)
-        │   ├── products/ProductCacheTest.java           (8 testes)
-        │   ├── cart/CartControllerTest.java             (14 testes)
-        │   ├── orders/OrderControllerTest.java          (17 testes)
-        │   ├── coupons/CouponControllerTest.java        (12 testes)
-        │   ├── shipping/ShippingControllerTest.java     (6 testes)
-        │   ├── payments/PaymentControllerTest.java      (8 testes)
-        │   ├── payments/CardPaymentControllerTest.java  (9 testes)
-        │   ├── admin/AdminControllerTest.java           (12 testes)
-        │   └── metrics/MetricsTest.java                 (7 testes)
-        └── resources/application-test.yml
+    ├── main.ts
+    ├── index.html
+    ├── styles.css
+    ├── environments/
+    │   ├── environment.ts
+    │   └── environment.prod.ts
+    └── app/
+        ├── app.config.ts
+        ├── app.routes.ts
+        ├── app.component.ts
+        ├── core/
+        │   ├── services/         (auth, api, cart, order, product)
+        │   ├── interceptors/     (jwt, error)
+        │   ├── guards/           (auth, admin, guest)
+        │   └── models/           (interfaces espelhando DTOs)
+        ├── shared/
+        │   ├── components/       (header, footer, loading, toast)
+        │   └── pipes/            (currency-brl, cpf, cep)
+        └── features/
+            ├── auth/             (login, register)
+            ├── catalog/          (list, detail)
+            ├── cart/             (cart-page)
+            ├── checkout/         (checkout-page)
+            ├── payment/          (pix, card)
+            ├── orders/           (list, detail)
+            └── admin/            (dashboard, products, orders, users)
 ```
-
-Total: 77 arquivos de produção, 12 classes de teste, **116 testes**.
 
 ---
 
-## Decisões técnicas
+## Contrato da API (referência para o frontend)
+
+### Autenticação
+
+| Método | Endpoint | Auth |
+|--------|----------|:----:|
+| `POST` | `/auth/register` | público |
+| `POST` | `/auth/login` | público |
+| `GET` | `/users/me` | usuário |
+
+### Catálogo
+
+| Método | Endpoint | Auth |
+|--------|----------|:----:|
+| `GET` | `/products?category=&search=&page=&size=` | público |
+| `GET` | `/products/{id}` | público |
+| `POST` | `/products` | ADMIN |
+| `PUT` | `/products/{id}` | ADMIN |
+| `DELETE` | `/products/{id}` | ADMIN |
+
+### Carrinho
+
+| Método | Endpoint |
+|--------|----------|
+| `POST` | `/cart/items` |
+| `GET` | `/cart` |
+| `PUT` | `/cart/items/{id}` |
+| `DELETE` | `/cart/items/{id}` |
+| `DELETE` | `/cart` |
+
+### Pedidos, cupons, frete e pagamento
+
+| Método | Endpoint | Auth |
+|--------|----------|:----:|
+| `POST` | `/orders?couponCode=&cep=` | usuário |
+| `GET` | `/orders` | usuário |
+| `GET` | `/orders/{id}` | dono/ADMIN |
+| `PATCH` | `/orders/{id}/status` | ADMIN |
+| `POST` | `/coupons` | ADMIN |
+| `GET` | `/coupons/{code}` | público |
+| `POST` | `/shipping/quote` | público |
+| `POST` | `/payments?orderId=` | dono |
+| `GET` | `/payments/{id}` | dono |
+| `POST` | `/payments/{id}/confirm` | ADMIN |
+| `POST` | `/payments/card?orderId=` | dono |
+| `POST` | `/webhooks/stripe` | público |
+
+### Admin
+
+| Método | Endpoint |
+|--------|----------|
+| `GET` | `/admin/dashboard` |
+| `GET` | `/admin/orders` |
+| `GET` | `/admin/users` |
+| `PATCH` | `/admin/users/{id}/role` |
+| `GET` | `/admin/products/low-stock?threshold=` |
+| `POST` | `/admin/products/{id}/restock` |
+
+### Observabilidade
+
+| Método | Endpoint | Auth |
+|--------|----------|:----:|
+| `GET` | `/actuator/health` | público |
+| `GET` | `/actuator/info` | público |
+| `GET` | `/actuator/metrics` | autenticado |
+| `GET` | `/actuator/prometheus` | autenticado |
+
+---
+
+## Decisões técnicas — Backend
 
 | Decisão | Motivo |
 |---------|--------|
@@ -580,7 +466,27 @@ Total: 77 arquivos de produção, 12 classes de teste, **116 testes**.
 
 ---
 
-## Bugs encontrados e correções
+## Decisões técnicas — Frontend
+
+*(A definir conforme as fases forem sendo concluídas.)*
+
+Decisões iniciais previstas:
+
+| Decisão | Motivo |
+|---------|--------|
+| Angular 19 com standalone components | Padrão atual; menos boilerplate que NgModule |
+| Tailwind CSS 4 | Utility-first; consistência visual sem CSS solto |
+| Angular Signals para estado | Reatividade granular, sem RxJS para UI simples |
+| `HttpInterceptor` funcional | Injeta JWT em toda requisição autenticada |
+| `CanActivate` para auth, `CanMatch` para admin | Rotas protegidas por role |
+| Reactive Forms | Validação tipada, melhor UX |
+| `localStorage` para JWT | Simplicidade; ponto de migração futura para cookie httpOnly |
+| Lazy loading por feature | Bundle inicial pequeno |
+| Environment files | URL da API varia entre dev e prod |
+
+---
+
+## Bugs encontrados e correções — Backend
 
 | Fase | Sintoma | Causa | Correção |
 |------|---------|-------|----------|
@@ -592,7 +498,7 @@ Total: 77 arquivos de produção, 12 classes de teste, **116 testes**.
 | 10 | `deveCriarPagamentoPix` esperava `amount = 60` e recebeu `50` | Helper não passava `?cep=`, logo sem frete | Revisar o helper antes de calcular valores esperados |
 | 12 | `adminListaUsuariosComTotalGasto` falhava em `$.content` | `/admin/users` retorna array simples; `/admin/orders` é que é paginado | Ajustar teste para `$` em vez de `$.content` |
 | 13 | `No qualifying bean of type 'CacheManager'` | Faltava `spring-boot-starter-cache` no `pom.xml` | Adicionar a dependência |
-| 13 | `ProductCacheTest` falhava — `findById` chamado mesmo após cache | Faltava `@Cacheable`/`@CacheEvict` no `ProductService` | Aplicar as anotações |
+| 13 | `ProductCacheTest` falhava — `findById` chamado mesmo após cache | Faltavam `@Cacheable`/`@CacheEvict` no `ProductService` | Aplicar as anotações |
 | 13 | `ProductControllerTest.qualquerPessoaPodeListarProdutos` falhava com dados antigos | Cache entre testes (mesmo contexto Spring) | Limpar cache no `@BeforeEach` |
 | 14 | `/actuator/prometheus` retornava 404 | `PrometheusMeterRegistry` não era criado pela auto-config | `PrometheusMetricsConfig` explícito |
 | 14 | `/actuator/health` retornava 503 | Redis health check falhava em ambiente sem Redis | `management.health.redis.enabled=false` no perfil de teste |
@@ -600,7 +506,7 @@ Total: 77 arquivos de produção, 12 classes de teste, **116 testes**.
 
 ---
 
-## Como executar
+## Como executar — Backend
 
 ```bash
 # Todos os testes
@@ -624,9 +530,30 @@ curl http://localhost:8080/actuator/metrics
 curl http://localhost:8080/actuator/prometheus   # requer token
 ```
 
+## Como executar — Frontend *(a criar)*
+
+```bash
+# Instalar dependências
+npm install
+
+# Servidor de desenvolvimento (http://localhost:4200)
+npm start
+
+# Build de produção
+npm run build
+
+# Testes unitários
+npm test
+
+# Testes E2E
+npm run e2e
+```
+
 ---
 
 ## Possíveis extensões futuras
+
+**Backend:**
 
 - Refresh token para JWT
 - Rate limiting nas rotas de auth e webhook
@@ -638,14 +565,31 @@ curl http://localhost:8080/actuator/prometheus   # requer token
 - Documentação automática com SpringDoc OpenAPI
 - Multi-tenancy (múltiplas lojas em uma instância)
 
+**Frontend:**
+
+- PWA (funciona offline para catálogo)
+- Internacionalização (pt-BR, en, es)
+- Tema escuro
+- Wishlist (lista de desejos)
+- Comparador de produtos
+- Reviews e avaliações
+- Chat de suporte
+- SEO com Angular Universal (SSR)
+
+**Full-stack:**
+
+- Deploy coordenado (backend em Railway + frontend em Vercel)
+- Monitoramento com Grafana + Prometheus
+- CI/CD com preview deploys por PR
+
 ---
 
 ## Como atualizar este documento
 
-Ao concluir uma nova fase (ou extensão futura):
+Ao concluir uma nova fase (backend ou frontend):
 
-1. Marcar a fase na tabela do roadmap e atualizar o contador de progresso
+1. Marcar a fase na tabela do roadmap correspondente e atualizar o contador
 2. Adicionar um bloco em "Fases concluídas" seguindo o formato das fases anteriores
-3. Atualizar a seção "Estrutura do projeto"
-4. Registrar novos bugs na tabela de bugs encontrados, se houver
-5. Atualizar a seção "Próxima fase" com o novo escopo
+3. Atualizar a seção "Estrutura prevista" (se aplicável)
+4. Atualizar a tabela "Decisões técnicas" com o que surgiu de novo
+5. Registrar novos bugs na tabela de bugs encontrados, se houver
