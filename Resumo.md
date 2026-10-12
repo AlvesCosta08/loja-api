@@ -17,13 +17,15 @@ Atualizado ao final de cada fase concluída.
 | Autenticação | JWT HS256 (JJWT 0.12.6) |
 | Banco — produção | PostgreSQL |
 | Banco — testes | H2 em memória |
+| Cache — produção | Redis |
+| Cache — testes | ConcurrentMapCacheManager |
 | Migrações | Flyway |
 | Build | Maven |
 | Boilerplate | Lombok |
 | Pacote base | `com.alvescosta.loja` |
 | Repositório | https://github.com/AlvesCosta08/loja-api |
 | Autor | Alves Costa |
-| Última atualização | Fase 12 — Painel administrativo |
+| Última atualização | Fase 13 — Cache Redis |
 
 ---
 
@@ -58,10 +60,10 @@ Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
 | 10 | Pagamento Pix (`/payments`) | Concluído |
 | 11 | Pagamento com cartão (Stripe) | Concluído |
 | 12 | Painel administrativo (`/admin`) | Concluído |
-| 13 | Cache Redis no catálogo | Próxima |
-| 14 | Dashboard de métricas | Pendente |
+| 13 | Cache Redis no catálogo | Concluído |
+| 14 | Dashboard de métricas | Próxima |
 
-Progresso: 13 de 14 fases. 101 testes automatizados, todos verdes.
+Progresso: 14 de 14 fases. 109 testes automatizados, todos verdes.
 
 ---
 
@@ -395,6 +397,44 @@ Decisões:
 
 ---
 
+### Fase 13 — Cache Redis no catálogo
+
+Endpoints afetados (mesma API, comportamento idêntico):
+- `GET /products/{id}` — cacheado por `id`
+- `GET /products` — cacheado por combinação de filtros + paginação
+- `POST/PUT/DELETE /products` — invalidam os dois caches
+
+Testes: 8, todos passando
+- `primeiraChamadaConsultaBanco` — primeira chamada bate no repositório
+- `segundaChamadaUsaCache` — segunda chamada não consulta repositório
+- `cacheRetornaDadosCorretos` — conteúdo idêntico após hit
+- `updateInvalidaCache` — `PUT` limpa o cache do item
+- `deleteLimpaCache` — `DELETE` limpa o cache do item
+- `listagemCacheadaPorFiltros` — combinação categoria + paginação é cacheada
+- `listagemVaziaTambemCacheada` — resultado vazio também é cacheado
+- `cachesConfiguradosExistem` — cache names `products` e `productLists` existem
+
+Implementação:
+- `spring-boot-starter-cache` (abstração) + `spring-boot-starter-data-redis` (backend)
+- `config/CacheConfig.java` com `@EnableCaching`
+- `@EnableCaching` também na classe `LojaApplication` (redundância intencional)
+- `application.yml`: `spring.cache.type=redis`, TTL de 5 minutos, host/porta do Redis
+- `application-test.yml`: `spring.cache.type=simple` (`ConcurrentMapCacheManager`)
+- `ProductService`:
+  - `@Cacheable("products", key = "#id")` em `findById`
+  - `@Cacheable("productLists", key = "categoria|search|page|size")` em `list`
+  - `@CacheEvict(value = {"products", "productLists"}, allEntries = true)` em `create`, `update`, `delete`
+- `docker-compose.yml` com PostgreSQL e Redis
+
+Decisões:
+- Separação em dois caches (`products` e `productLists`) — invalidação independente por tipo
+- `@CacheEvict(allEntries = true)` na escrita — invalidação simples e segura
+- `spring-boot-starter-cache` é **obrigatório** mesmo com Redis: só ele registra o aspect de cache
+- Testes limpam cache no `@BeforeEach` — isolamento entre cenários
+- Em testes, `ConcurrentMapCacheManager` evita dependência de Redis rodando
+
+---
+
 ## Estrutura do projeto
 
 ```
@@ -404,6 +444,7 @@ loja-api/
 ├── CHANGELOG.md
 ├── Resumo.md
 ├── LICENSE
+├── docker-compose.yml
 ├── .editorconfig
 ├── .gitattributes
 ├── .env.example
@@ -416,13 +457,13 @@ loja-api/
     ├── main/
     │   ├── java/com/alvescosta/loja/
     │   │   ├── LojaApplication.java
-    │   │   ├── config/SecurityConfig.java
+    │   │   ├── config/          (SecurityConfig, CacheConfig)
     │   │   ├── domain/          (14 arquivos: entidades e enums)
     │   │   ├── dto/             (23 records)
     │   │   ├── exception/       (4 arquivos)
     │   │   ├── repository/      (6 interfaces JPA)
     │   │   ├── security/        (4 arquivos)
-    │   │   ├── service/         (12 serviços)
+    │   │   ├── service/         (13 serviços)
     │   │   └── controller/      (10 controllers)
     │   └── resources/
     │       ├── application.yml
@@ -441,6 +482,7 @@ loja-api/
         │   ├── auth/AuthControllerTest.java             (6 testes)
         │   ├── users/UserControllerTest.java            (3 testes)
         │   ├── products/ProductControllerTest.java      (14 testes)
+        │   ├── products/ProductCacheTest.java           (8 testes)
         │   ├── cart/CartControllerTest.java             (14 testes)
         │   ├── orders/OrderControllerTest.java          (17 testes)
         │   ├── coupons/CouponControllerTest.java        (12 testes)
@@ -451,48 +493,44 @@ loja-api/
         └── resources/application-test.yml
 ```
 
-Total: 73 arquivos de produção, 10 classes de teste, 101 testes.
+Total: 75 arquivos de produção, 11 classes de teste, 109 testes.
 
 ---
 
-## Próxima fase — Fase 13: Cache Redis no catálogo
+## Próxima fase — Fase 14: Dashboard de métricas
 
 ### Objetivo
 
-Adicionar cache Redis no catálogo de produtos para reduzir carga no banco em
-consultas repetidas. Invalidar cache em operações de escrita.
+Expor métricas customizadas via Actuator + Micrometer, incluindo contadores
+de negócio (pedidos criados, pagamentos confirmados) e histogramas de latência.
+Integração com Prometheus para scraping em produção.
 
-### Testes (RED) — `ProductCacheTest` (~8)
+### Testes (RED) — `MetricsTest` (~6)
 
-- Primeira chamada a `GET /products/{id}` consulta o banco
-- Segunda chamada idêntica não consulta o banco novamente
-- `PUT /products/{id}` invalida o cache do item
-- `DELETE /products/{id}` invalida o cache do item
-- `POST /products` invalida a listagem
-- Listagem cacheada por combinação de filtros
-- Após invalidação, endpoint retorna dados atualizados
-- Em ambiente de teste, usar `ConcurrentMapCacheManager` (sem Redis externo)
+- `/actuator/health` acessível sem autenticação
+- `/actuator/metrics` exige autenticação
+- Métrica `loja.orders.created` incrementa após checkout
+- Métrica `loja.payments.confirmed` incrementa após confirmação
+- `/actuator/prometheus` expõe formato Prometheus
+- `/actuator/info` retorna 200
 
 ### Implementação (GREEN)
 
-- Dependência `spring-boot-starter-data-redis` no `pom.xml`
-- `config/CacheConfig.java` com `@EnableCaching` e `RedisCacheManager` (produção)
-- `application.yml` com host/porta do Redis e TTL de 5 minutos
-- `application-test.yml` com perfil que usa `ConcurrentMapCacheManager`
-- `@Cacheable` em `ProductService.findById` e `ProductService.list`
-- `@CacheEvict` em `create`, `update`, `delete`
-- `docker-compose.yml` com serviço Redis
+- Dependência `micrometer-registry-prometheus` no `pom.xml`
+- Configurar `management.endpoints.web.exposure.include=health,info,metrics,prometheus`
+- `Counter` e `Timer` customizados injetados via `MeterRegistry`
+- Instrumentar `OrderService.checkout` e `PaymentService.confirm`
 
 ### Refactor
 
-- Considerar `@CachePut` em `update` para evitar refetch
-- Métricas de hit/miss via Micrometer (ponte para a Fase 14)
+- Centralizar criação de métricas em `MetricsService`
+- Documentar nomes das métricas no `README.md`
 
 ### Critérios de conclusão
 
 - `./mvnw clean test` com sucesso
-- Aproximadamente 8 testes novos passando
-- API responde igual com e sem cache
+- Aproximadamente 6 testes novos passando
+- `/actuator/prometheus` exposto em produção
 
 ---
 
@@ -522,6 +560,9 @@ consultas repetidas. Invalidar cache em operações de escrita.
 | Idempotência no webhook | Stripe reenvia em timeout; pagamento já `CONFIRMED` não reprocessa |
 | `@PreAuthorize` na classe do AdminController | Todos os métodos herdam a restrição de role |
 | Guarda-corpo de role | ADMIN não pode alterar a própria role (evita lockout) |
+| **`spring-boot-starter-cache` obrigatório** | Sem ele, nenhum `CacheManager` é criado, `@Cacheable` fica mudo |
+| **Dois caches separados** (`products` e `productLists`) | Invalidação independente por tipo de consulta |
+| **Limpar cache no `@BeforeEach` dos testes** | Evita vazamento de dados entre testes |
 
 ---
 
@@ -536,6 +577,9 @@ consultas repetidas. Invalidar cache em operações de escrita.
 | 9 | Teste esperava `total = 1000` e recebeu `2500` | Produto do `setup()` custa R$ 2500 | Fixtures pequenas criadas dentro de cada teste |
 | 10 | `deveCriarPagamentoPix` esperava `amount = 60` e recebeu `50` | Helper não passava `?cep=`, logo sem frete | Revisar o helper antes de calcular valores esperados |
 | 12 | `adminListaUsuariosComTotalGasto` falhava em `$.content` | `/admin/users` retorna array simples; `/admin/orders` é que é paginado | Ajustar teste para `$` em vez de `$.content` |
+| 13 | `No qualifying bean of type 'CacheManager'` | Faltava `spring-boot-starter-cache` no `pom.xml` | Adicionar a dependência |
+| 13 | `ProductCacheTest` falhava — `findById` chamado mesmo após cache | Faltava `@Cacheable`/`@CacheEvict` no `ProductService` | Aplicar as anotações |
+| 13 | `ProductControllerTest.qualquerPessoaPodeListarProdutos` falhava com dados antigos | Cache entre testes (mesmo contexto Spring) | Limpar cache no `@BeforeEach` |
 
 ---
 
@@ -550,6 +594,9 @@ consultas repetidas. Invalidar cache em operações de escrita.
 
 # Classe específica
 ./mvnw test -Dtest=ProductControllerTest
+
+# Subir dependências (PostgreSQL + Redis)
+docker compose up -d
 
 # Subir a aplicação
 ./mvnw spring-boot:run
