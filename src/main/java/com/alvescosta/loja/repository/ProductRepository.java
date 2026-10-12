@@ -5,6 +5,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Page<Product> findByCategoryIgnoreCase(String category, Pageable pageable);
@@ -13,4 +15,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Page<Product> findByCategoryIgnoreCaseAndNameContainingIgnoreCase(
             String category, String name, Pageable pageable);
+
+    List<Product> findByStockLessThanEqualOrderByStockAsc(Integer threshold);
 }
