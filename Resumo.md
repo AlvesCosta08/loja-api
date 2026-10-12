@@ -21,6 +21,7 @@
 | **Boilerplate** | Lombok |
 | **Build** | Maven |
 | **Pacote base** | `com.alvescosta.loja` |
+| **Repositório** | https://github.com/AlvesCosta08/loja-api |
 | **Autor** | Alves Costa |
 | **Última atualização** | Fim da Fase 10 — Pagamento Pix |
 
@@ -639,7 +640,7 @@ Adicionar suporte a **cartão de crédito** reaproveitando a estrutura da Fase 1
 
 ## 📝 Template para Atualizar ao Final de Cada Fase
 
-Ao concluir uma nova fase, **adicione** ao arquivo:
+Ao concluir uma nova fase, **atualize** este arquivo assim:
 
 ### 1. Atualize a tabela do **Roadmap** (marque ✅) e o contador de progresso
 
@@ -658,36 +659,42 @@ Ao concluir uma nova fase, **adicione** ao arquivo:
 
 **Refactor / Decisões:**
 - O que foi melhorado e por quê
+
+
+
+---
+
+## 📊 O que mudou vs. versão que você colou
+
+| Item | Antes (no seu arquivo) | Depois |
+|------|------------------------|--------|
+| **Cabeçalho** | `Repositório:` ausente | ✅ Adicionado `https://github.com/AlvesCosta08/loja-api` |
+| **Fim do arquivo** | Colado texto de "Resumo do que mudou" + "Próximo passo" (que eram da minha mensagem de chat, não do documento) | ✅ Removido |
+| **Template final** | Dizia "adicione ao arquivo" | ✅ Reescrito como "atualize este arquivo" |
+| **Consistência** | Progresso 11/14, 80 testes ✅ | ✅ Mantido |
+
+---
+
+## 📋 O que preciso de você
+
+Roda:
+
+```bash
+# Substitui o Resumo.md
+nano Resumo.md
+# (cola o conteúdo acima, salva com Ctrl+O, Enter, Ctrl+X)
+
+# Confirma
+head -20 Resumo.md
+tail -20 Resumo.md
 ```
 
-# Proxima fase 
+Depois, se quiser commitar a atualização:
 
+```bash
+git add Resumo.md
+git commit -m "docs: atualiza Resumo.md com Fase 10 concluída"
+git push
+```
 
----
-
-## 📊 Resumo do que mudou
-
-| Seção | Antes | Agora |
-|-------|-------|-------|
-| **Última atualização** | Fim da Fase 9 | Fim da Fase 10 |
-| **Progresso** | 10/14 (71%) | **11/14 (79%)** |
-| **Testes verdes** | 72 | **80** |
-| **Roadmap** | 10 ⏳ | 10 ✅ · 11 ⏳ |
-| **Fases detalhadas** | 0–9 | 0–10 |
-| **Estrutura** | 17 dtos | +1 (`PaymentResponse`); +3 domains Payment; +1 repo; +2 services; +1 controller; +1 migration V8 |
-| **Bugs** | 5 lições | **6 lições** |
-| **Próxima fase** | Fase 10 | **Fase 11 — Stripe** |
-
----
-
-## 🚀 Próximo passo
-
-Você já tem o `CardPaymentControllerTest.java` (RED da Fase 11) na minha mensagem anterior. Quando rodar e confirmar o RED, partimos pro GREEN:
-
-1. `service/PaymentGateway.java` (interface)
-2. `service/StripePaymentGateway.java` (mock)
-3. `controller/WebhookController.java`
-4. Migration `V9__alter_payments_add_gateway_fields.sql`
-5. `Payment` ganha `gatewayRef` e `clientSecret`
-
-Manda o resultado do RED. 🚀
+**Manda ver.** 🚀
