@@ -23,7 +23,7 @@ Atualizado ao final de cada fase concluída.
 | Pacote base | `com.alvescosta.loja` |
 | Repositório | https://github.com/AlvesCosta08/loja-api |
 | Autor | Alves Costa |
-| Última atualização | Fase 11 — Pagamento com cartão |
+| Última atualização | Fase 12 — Painel administrativo |
 
 ---
 
@@ -57,11 +57,11 @@ Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
 | 9 | Cálculo de frete (`/shipping`) | Concluído |
 | 10 | Pagamento Pix (`/payments`) | Concluído |
 | 11 | Pagamento com cartão (Stripe) | Concluído |
-| 12 | Painel administrativo | Próxima |
-| 13 | Cache Redis no catálogo | Pendente |
+| 12 | Painel administrativo (`/admin`) | Concluído |
+| 13 | Cache Redis no catálogo | Próxima |
 | 14 | Dashboard de métricas | Pendente |
 
-Progresso: 12 de 14 fases. 89 testes automatizados, todos verdes.
+Progresso: 13 de 14 fases. 101 testes automatizados, todos verdes.
 
 ---
 
@@ -363,6 +363,38 @@ Decisões:
 
 ---
 
+### Fase 12 — Painel administrativo
+
+Endpoints (todos com `@PreAuthorize("hasRole('ADMIN')")`):
+- `GET /admin/dashboard` — totais de vendas, ticket médio, nº de pedidos
+- `GET /admin/orders` — todos os pedidos, paginado
+- `GET /admin/users` — clientes com total gasto e contagem de pedidos
+- `PATCH /admin/users/{id}/role` — promove/rebaixa usuário
+- `GET /admin/products/low-stock?threshold=5` — produtos com estoque abaixo do limite
+- `POST /admin/products/{id}/restock` — incrementa estoque
+
+Testes: 12, todos passando
+- Autorização: `deveRetornar401SemToken`, `clienteNaoPodeAcessarDashboard`, `clienteNaoPodeListarUsuarios`
+- Dashboard: `dashboardZerado`, `dashboardComPedidos`
+- Listagens: `adminListaTodosOsPedidos`, `adminListaUsuariosComTotalGasto`
+- Roles: `adminDevePromoverUsuario`, `adminNaoPodeRebaixarASiMesmo`
+- Estoque: `deveListarProdutosComEstoqueBaixo`, `adminDeveReporEstoque`, `deveRetornar404AoReporProdutoInexistente`
+
+Implementação:
+- `controller/AdminController.java` com `@PreAuthorize` na classe
+- `service/AdminService.java`
+- DTOs: `DashboardResponse`, `AdminUserResponse`, `UpdateRoleRequest`, `RestockRequest`
+- Queries agregadas em `OrderRepository` com `@Query`
+- `ProductRepository.findByStockLessThanEqualOrderByStockAsc`
+
+Decisões:
+- Guarda-corpo: ADMIN não pode alterar a própria role (evita lockout)
+- `/admin/users` retorna lista simples (lojas pequenas); `/admin/orders` é paginado (cresce muito)
+- Queries agregadas via `@Query` para evitar N+1 no dashboard
+- `@PreAuthorize` na classe — todos os métodos herdam a restrição
+
+---
+
 ## Estrutura do projeto
 
 ```
@@ -386,12 +418,12 @@ loja-api/
     │   │   ├── LojaApplication.java
     │   │   ├── config/SecurityConfig.java
     │   │   ├── domain/          (14 arquivos: entidades e enums)
-    │   │   ├── dto/             (19 records)
+    │   │   ├── dto/             (23 records)
     │   │   ├── exception/       (4 arquivos)
     │   │   ├── repository/      (6 interfaces JPA)
     │   │   ├── security/        (4 arquivos)
-    │   │   ├── service/         (11 serviços)
-    │   │   └── controller/      (9 controllers)
+    │   │   ├── service/         (12 serviços)
+    │   │   └── controller/      (10 controllers)
     │   └── resources/
     │       ├── application.yml
     │       └── db/migration/
@@ -414,54 +446,53 @@ loja-api/
         │   ├── coupons/CouponControllerTest.java        (12 testes)
         │   ├── shipping/ShippingControllerTest.java     (6 testes)
         │   ├── payments/PaymentControllerTest.java      (8 testes)
-        │   └── payments/CardPaymentControllerTest.java  (9 testes)
+        │   ├── payments/CardPaymentControllerTest.java  (9 testes)
+        │   └── admin/AdminControllerTest.java           (12 testes)
         └── resources/application-test.yml
 ```
 
-Total: 68 arquivos de produção, 9 classes de teste, 89 testes.
+Total: 73 arquivos de produção, 10 classes de teste, 101 testes.
 
 ---
 
-## Próxima fase — Fase 12: Painel administrativo
+## Próxima fase — Fase 13: Cache Redis no catálogo
 
 ### Objetivo
 
-Expor endpoints exclusivos para ADMIN com visão agregada da loja: pedidos de
-todos os clientes, usuários com total gasto, produtos com estoque baixo e
-capacidade de repor estoque.
+Adicionar cache Redis no catálogo de produtos para reduzir carga no banco em
+consultas repetidas. Invalidar cache em operações de escrita.
 
-### Testes (RED) — `AdminControllerTest` (~12)
+### Testes (RED) — `ProductCacheTest` (~8)
 
-- 401 sem token
-- 403 quando CUSTOMER tenta acessar qualquer rota admin
-- `GET /admin/dashboard` — totais do período (vendas, ticket médio, nº pedidos)
-- `GET /admin/orders` — todos os pedidos, com filtros por status e período
-- `GET /admin/users` — clientes com total gasto e nº de pedidos
-- `PATCH /admin/users/{id}/role` — promove CUSTOMER para ADMIN
-- `PATCH` não permite rebaixar a si mesmo (evita lockout)
-- `GET /admin/products/low-stock?threshold=5` — produtos com estoque abaixo do limite
-- `POST /admin/products/{id}/restock` — incrementa estoque
+- Primeira chamada a `GET /products/{id}` consulta o banco
+- Segunda chamada idêntica não consulta o banco novamente
+- `PUT /products/{id}` invalida o cache do item
+- `DELETE /products/{id}` invalida o cache do item
+- `POST /products` invalida a listagem
+- Listagem cacheada por combinação de filtros
+- Após invalidação, endpoint retorna dados atualizados
+- Em ambiente de teste, usar `ConcurrentMapCacheManager` (sem Redis externo)
 
 ### Implementação (GREEN)
 
-- `controller/AdminController.java`
-- `service/AdminService.java`
-- `dto/DashboardResponse.java`
-- `dto/AdminOrderResponse.java`
-- `dto/AdminUserResponse.java`
-- `dto/RestockRequest.java`
-- `dto/UpdateRoleRequest.java`
-- Queries agregadas em `OrderRepository` e `UserRepository` com `@Query`
+- Dependência `spring-boot-starter-data-redis` no `pom.xml`
+- `config/CacheConfig.java` com `@EnableCaching` e `RedisCacheManager` (produção)
+- `application.yml` com host/porta do Redis e TTL de 5 minutos
+- `application-test.yml` com perfil que usa `ConcurrentMapCacheManager`
+- `@Cacheable` em `ProductService.findById` e `ProductService.list`
+- `@CacheEvict` em `create`, `update`, `delete`
+- `docker-compose.yml` com serviço Redis
 
 ### Refactor
 
-- Considerar projeções JPA para evitar N+1 no dashboard
+- Considerar `@CachePut` em `update` para evitar refetch
+- Métricas de hit/miss via Micrometer (ponte para a Fase 14)
 
 ### Critérios de conclusão
 
 - `./mvnw clean test` com sucesso
-- Cerca de 12 testes novos passando
-- Dashboard sem consultas N+1
+- Aproximadamente 8 testes novos passando
+- API responde igual com e sem cache
 
 ---
 
@@ -489,6 +520,8 @@ capacidade de repor estoque.
 | Expiração do Pix | Evita QR Code "zumbi" |
 | `PaymentGateway` como interface | Trocar PIX/Stripe/Mercado Pago sem alterar controller |
 | Idempotência no webhook | Stripe reenvia em timeout; pagamento já `CONFIRMED` não reprocessa |
+| `@PreAuthorize` na classe do AdminController | Todos os métodos herdam a restrição de role |
+| Guarda-corpo de role | ADMIN não pode alterar a própria role (evita lockout) |
 
 ---
 
@@ -502,6 +535,7 @@ capacidade de repor estoque.
 | 8 | `Syntax error ... c1_0.[*]value` no H2 | `VALUE` é palavra reservada SQL | `@Column(name = "discount_value")` |
 | 9 | Teste esperava `total = 1000` e recebeu `2500` | Produto do `setup()` custa R$ 2500 | Fixtures pequenas criadas dentro de cada teste |
 | 10 | `deveCriarPagamentoPix` esperava `amount = 60` e recebeu `50` | Helper não passava `?cep=`, logo sem frete | Revisar o helper antes de calcular valores esperados |
+| 12 | `adminListaUsuariosComTotalGasto` falhava em `$.content` | `/admin/users` retorna array simples; `/admin/orders` é que é paginado | Ajustar teste para `$` em vez de `$.content` |
 
 ---
 
