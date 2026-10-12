@@ -29,6 +29,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final CouponService couponService;
     private final ShippingService shippingService;
+    private final MetricsService metricsService;
 
     @Transactional
     public OrderResponse checkout(Long userId, String couponCode, String cep) {
@@ -96,6 +97,7 @@ public class OrderService {
         }
 
         orderRepository.save(order);
+        metricsService.orderCreated();
 
         if (couponCode != null && !couponCode.isBlank()) {
             couponService.registerUsage(couponCode);

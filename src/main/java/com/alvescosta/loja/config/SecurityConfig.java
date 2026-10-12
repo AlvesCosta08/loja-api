@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/health").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/coupons/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/shipping/quote").permitAll()

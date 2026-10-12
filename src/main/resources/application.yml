@@ -3,8 +3,8 @@ spring:
     name: loja-api
   datasource:
     url: jdbc:postgresql://localhost:5432/loja
-    username: postgres
-    password: postgres
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -15,6 +15,15 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 5m
+      cache-null-values: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 jwt:
   secret: ${JWT_SECRET:change-me-in-production-with-at-least-32-chars}
@@ -24,4 +33,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Loja API
+    description: API REST de e-commerce
+    version: 0.10.0

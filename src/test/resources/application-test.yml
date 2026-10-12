@@ -16,3 +16,21 @@ spring:
 jwt:
   secret: test-secret-key-with-at-least-32-chars-ok
   expiration-ms: 3600000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    prometheus:
+      enabled: true
+    metrics:
+      enabled: true
+  health:
+    redis:
+      enabled: false
+  prometheus:
+    metrics:
+      export:
+        enabled: true

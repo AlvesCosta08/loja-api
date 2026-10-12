@@ -22,6 +22,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final PaymentGateway paymentGateway;
+    private final MetricsService metricsService;
 
     // -------------------------------------------------------------
     // PIX
@@ -74,8 +75,7 @@ public class PaymentService {
     }
 
     /**
-     * Processa o webhook do gateway. É idempotente: se o pagamento já está
-     * CONFIRMED, retorna 200 sem re-processar.
+     * Processa o webhook do gateway. É idempotente.
      */
     @Transactional
     public PaymentResponse handleGatewayWebhook(String gatewayRef) {
@@ -86,7 +86,6 @@ public class PaymentService {
         Payment payment = paymentRepository.findByGatewayRef(gatewayRef)
                 .orElseThrow(() -> new NotFoundException("Pagamento nao encontrado"));
 
-        // Idempotência: se já confirmado, não faz nada
         if (payment.getStatus() == PaymentStatus.CONFIRMED) {
             return PaymentResponse.from(payment);
         }
@@ -103,12 +102,13 @@ public class PaymentService {
         Order order = payment.getOrder();
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
+        metricsService.paymentConfirmed();
 
         return PaymentResponse.from(payment);
     }
 
     // -------------------------------------------------------------
-    // Consulta / confirmação manual (PIX)
+    // Confirmação manual (PIX)
     // -------------------------------------------------------------
 
     @Transactional
@@ -130,6 +130,7 @@ public class PaymentService {
         Order order = payment.getOrder();
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
+        metricsService.paymentConfirmed();
 
         return PaymentResponse.from(payment);
     }
@@ -144,10 +145,6 @@ public class PaymentService {
         }
         return PaymentResponse.from(payment);
     }
-
-    // -------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------
 
     private Order loadOrderForPayment(Long orderId, Long userId, boolean isAdmin) {
         Order order = orderRepository.findById(orderId)
