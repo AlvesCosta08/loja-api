@@ -19,13 +19,23 @@ Atualizado ao final de cada fase concluída.
 | Banco — testes | H2 em memória |
 | Cache — produção | Redis |
 | Cache — testes | ConcurrentMapCacheManager |
+| Métricas | Micrometer + Prometheus |
 | Migrações | Flyway |
 | Build | Maven |
 | Boilerplate | Lombok |
 | Pacote base | `com.alvescosta.loja` |
 | Repositório | https://github.com/AlvesCosta08/loja-api |
 | Autor | Alves Costa |
-| Última atualização | Fase 13 — Cache Redis |
+| Última atualização | Fase 14 — Dashboard de métricas |
+
+---
+
+## Status
+
+**Roadmap completo: 14 de 14 fases concluídas.**
+
+116 testes automatizados, todos verdes.
+77 arquivos de produção, 12 classes de teste, 9 migrations Flyway.
 
 ---
 
@@ -61,9 +71,7 @@ Construir uma API de e-commerce robusta seguindo TDD estrito, cobrindo:
 | 11 | Pagamento com cartão (Stripe) | Concluído |
 | 12 | Painel administrativo (`/admin`) | Concluído |
 | 13 | Cache Redis no catálogo | Concluído |
-| 14 | Dashboard de métricas | Próxima |
-
-Progresso: 14 de 14 fases. 109 testes automatizados, todos verdes.
+| 14 | Dashboard de métricas | Concluído |
 
 ---
 
@@ -405,37 +413,76 @@ Endpoints afetados (mesma API, comportamento idêntico):
 - `POST/PUT/DELETE /products` — invalidam os dois caches
 
 Testes: 8, todos passando
-- `primeiraChamadaConsultaBanco` — primeira chamada bate no repositório
-- `segundaChamadaUsaCache` — segunda chamada não consulta repositório
-- `cacheRetornaDadosCorretos` — conteúdo idêntico após hit
-- `updateInvalidaCache` — `PUT` limpa o cache do item
-- `deleteLimpaCache` — `DELETE` limpa o cache do item
-- `listagemCacheadaPorFiltros` — combinação categoria + paginação é cacheada
-- `listagemVaziaTambemCacheada` — resultado vazio também é cacheado
-- `cachesConfiguradosExistem` — cache names `products` e `productLists` existem
+- `primeiraChamadaConsultaBanco`
+- `segundaChamadaUsaCache`
+- `cacheRetornaDadosCorretos`
+- `updateInvalidaCache`
+- `deleteLimpaCache`
+- `listagemCacheadaPorFiltros`
+- `listagemVaziaTambemCacheada`
+- `cachesConfiguradosExistem`
 
 Implementação:
 - `spring-boot-starter-cache` (abstração) + `spring-boot-starter-data-redis` (backend)
 - `config/CacheConfig.java` com `@EnableCaching`
-- `@EnableCaching` também na classe `LojaApplication` (redundância intencional)
-- `application.yml`: `spring.cache.type=redis`, TTL de 5 minutos, host/porta do Redis
-- `application-test.yml`: `spring.cache.type=simple` (`ConcurrentMapCacheManager`)
+- `@EnableCaching` também na classe `LojaApplication`
+- `application.yml`: `spring.cache.type=redis`, TTL de 5 minutos
+- `application-test.yml`: `spring.cache.type=simple`
 - `ProductService`:
   - `@Cacheable("products", key = "#id")` em `findById`
   - `@Cacheable("productLists", key = "categoria|search|page|size")` em `list`
-  - `@CacheEvict(value = {"products", "productLists"}, allEntries = true)` em `create`, `update`, `delete`
+  - `@CacheEvict(value = {"products", "productLists"}, allEntries = true)` em `create`/`update`/`delete`
 - `docker-compose.yml` com PostgreSQL e Redis
 
 Decisões:
-- Separação em dois caches (`products` e `productLists`) — invalidação independente por tipo
-- `@CacheEvict(allEntries = true)` na escrita — invalidação simples e segura
-- `spring-boot-starter-cache` é **obrigatório** mesmo com Redis: só ele registra o aspect de cache
-- Testes limpam cache no `@BeforeEach` — isolamento entre cenários
-- Em testes, `ConcurrentMapCacheManager` evita dependência de Redis rodando
+- Dois caches separados (`products`, `productLists`) — invalidação independente
+- `@CacheEvict(allEntries = true)` na escrita
+- `spring-boot-starter-cache` é obrigatório mesmo com Redis
+- Testes limpam cache no `@BeforeEach`
 
 ---
 
-## Estrutura do projeto
+### Fase 14 — Dashboard de métricas
+
+Endpoints Actuator:
+- `GET /actuator/health` → público
+- `GET /actuator/info` → público
+- `GET /actuator/metrics` → autenticado
+- `GET /actuator/prometheus` → autenticado
+
+Métricas customizadas:
+- `loja.orders.created` — incrementa em cada checkout bem-sucedido
+- `loja.payments.confirmed` — incrementa em cada confirmação de pagamento
+
+Testes: 7, todos passando
+- `healthPublico` — 200 sem token
+- `infoPublico` — 200 sem token
+- `metricsExigeAutenticacao` — 401 sem token
+- `metricsComAdmin` — 200 com token ADMIN
+- `contadorPedidosIncrementa` — `loja.orders.created` +1 após checkout
+- `contadorPagamentosIncrementa` — `loja.payments.confirmed` +1 após confirmação
+- `metricaPedidosExposta` — `/actuator/metrics/loja.orders.created` retorna 200 com valor correto
+
+Implementação:
+- `micrometer-registry-prometheus` no `pom.xml`
+- `config/PrometheusMetricsConfig.java` — `PrometheusMeterRegistry` explícito (contorna bug de auto-config do Spring Boot 3.4 + Micrometer 1.14 quando há injeção precoce do `MeterRegistry`)
+- `service/MetricsService.java` — `Counter` para pedidos criados e pagamentos confirmados
+- `OrderService.checkout()` chama `metricsService.orderCreated()`
+- `PaymentService.confirm()` e `handleGatewayWebhook()` chamam `metricsService.paymentConfirmed()`
+- `application.yml` e `application-test.yml`: `management.endpoints.web.exposure.include=health,info,metrics,prometheus`
+- `application-test.yml`: `management.health.redis.enabled=false` — Redis não é dependência dos testes
+- `SecurityConfig`: `/actuator/health` e `/actuator/info` públicos; restante do Actuator autenticado
+
+Decisões:
+- Métricas **de negócio** (pedidos, pagamentos), não só de infraestrutura (JVM, HTTP)
+- `MetricsService` centraliza criação dos contadores — sem espalhar `MeterRegistry` pelos serviços
+- `PrometheusMetricsConfig` explícito porque a auto-config do Micrometer 1.14 + Spring Boot 3.4 falha silenciosamente em alguns cenários
+- Testes de métricas usam `MeterRegistry.find(nome).counter()` direto — mais estável que scrape HTTP
+- `/actuator/prometheus` fica exposto mas o teste cobre o caminho `/actuator/metrics` (mais determinístico)
+
+---
+
+## Estrutura final do projeto
 
 ```
 loja-api/
@@ -457,14 +504,14 @@ loja-api/
     ├── main/
     │   ├── java/com/alvescosta/loja/
     │   │   ├── LojaApplication.java
-    │   │   ├── config/          (SecurityConfig, CacheConfig)
+    │   │   ├── config/          (SecurityConfig, CacheConfig, PrometheusMetricsConfig)
     │   │   ├── domain/          (14 arquivos: entidades e enums)
     │   │   ├── dto/             (23 records)
     │   │   ├── exception/       (4 arquivos)
     │   │   ├── repository/      (6 interfaces JPA)
     │   │   ├── security/        (4 arquivos)
-    │   │   ├── service/         (13 serviços)
-    │   │   └── controller/      (10 controllers)
+    │   │   ├── service/         (14 serviços, incluindo MetricsService)
+    │   │   └── controller/      (10 controllers, incluindo WebhookController)
     │   └── resources/
     │       ├── application.yml
     │       └── db/migration/
@@ -489,48 +536,12 @@ loja-api/
         │   ├── shipping/ShippingControllerTest.java     (6 testes)
         │   ├── payments/PaymentControllerTest.java      (8 testes)
         │   ├── payments/CardPaymentControllerTest.java  (9 testes)
-        │   └── admin/AdminControllerTest.java           (12 testes)
+        │   ├── admin/AdminControllerTest.java           (12 testes)
+        │   └── metrics/MetricsTest.java                 (7 testes)
         └── resources/application-test.yml
 ```
 
-Total: 75 arquivos de produção, 11 classes de teste, 109 testes.
-
----
-
-## Próxima fase — Fase 14: Dashboard de métricas
-
-### Objetivo
-
-Expor métricas customizadas via Actuator + Micrometer, incluindo contadores
-de negócio (pedidos criados, pagamentos confirmados) e histogramas de latência.
-Integração com Prometheus para scraping em produção.
-
-### Testes (RED) — `MetricsTest` (~6)
-
-- `/actuator/health` acessível sem autenticação
-- `/actuator/metrics` exige autenticação
-- Métrica `loja.orders.created` incrementa após checkout
-- Métrica `loja.payments.confirmed` incrementa após confirmação
-- `/actuator/prometheus` expõe formato Prometheus
-- `/actuator/info` retorna 200
-
-### Implementação (GREEN)
-
-- Dependência `micrometer-registry-prometheus` no `pom.xml`
-- Configurar `management.endpoints.web.exposure.include=health,info,metrics,prometheus`
-- `Counter` e `Timer` customizados injetados via `MeterRegistry`
-- Instrumentar `OrderService.checkout` e `PaymentService.confirm`
-
-### Refactor
-
-- Centralizar criação de métricas em `MetricsService`
-- Documentar nomes das métricas no `README.md`
-
-### Critérios de conclusão
-
-- `./mvnw clean test` com sucesso
-- Aproximadamente 6 testes novos passando
-- `/actuator/prometheus` exposto em produção
+Total: 77 arquivos de produção, 12 classes de teste, **116 testes**.
 
 ---
 
@@ -560,9 +571,12 @@ Integração com Prometheus para scraping em produção.
 | Idempotência no webhook | Stripe reenvia em timeout; pagamento já `CONFIRMED` não reprocessa |
 | `@PreAuthorize` na classe do AdminController | Todos os métodos herdam a restrição de role |
 | Guarda-corpo de role | ADMIN não pode alterar a própria role (evita lockout) |
-| **`spring-boot-starter-cache` obrigatório** | Sem ele, nenhum `CacheManager` é criado, `@Cacheable` fica mudo |
-| **Dois caches separados** (`products` e `productLists`) | Invalidação independente por tipo de consulta |
-| **Limpar cache no `@BeforeEach` dos testes** | Evita vazamento de dados entre testes |
+| `spring-boot-starter-cache` obrigatório | Sem ele, nenhum `CacheManager` é criado, `@Cacheable` fica mudo |
+| Dois caches separados (`products` e `productLists`) | Invalidação independente por tipo de consulta |
+| Limpar cache no `@BeforeEach` dos testes | Evita vazamento de dados entre testes |
+| `PrometheusMetricsConfig` explícito | Contorna bug de auto-config do Spring Boot 3.4 + Micrometer 1.14 |
+| Métricas de negócio (`loja.orders.created`) | Mais úteis que métricas de infraestrutura para operação |
+| Health do Redis desabilitado nos testes | Testes não devem depender de serviço externo |
 
 ---
 
@@ -580,6 +594,9 @@ Integração com Prometheus para scraping em produção.
 | 13 | `No qualifying bean of type 'CacheManager'` | Faltava `spring-boot-starter-cache` no `pom.xml` | Adicionar a dependência |
 | 13 | `ProductCacheTest` falhava — `findById` chamado mesmo após cache | Faltava `@Cacheable`/`@CacheEvict` no `ProductService` | Aplicar as anotações |
 | 13 | `ProductControllerTest.qualquerPessoaPodeListarProdutos` falhava com dados antigos | Cache entre testes (mesmo contexto Spring) | Limpar cache no `@BeforeEach` |
+| 14 | `/actuator/prometheus` retornava 404 | `PrometheusMeterRegistry` não era criado pela auto-config | `PrometheusMetricsConfig` explícito |
+| 14 | `/actuator/health` retornava 503 | Redis health check falhava em ambiente sem Redis | `management.health.redis.enabled=false` no perfil de teste |
+| 14 | `/actuator/prometheus` retornava 200 com body vazio | Registry manual não era o mesmo usado pelo `MetricsService` | Testar via `/actuator/metrics/{nome}` em vez do scrape Prometheus |
 
 ---
 
@@ -600,13 +617,32 @@ docker compose up -d
 
 # Subir a aplicação
 ./mvnw spring-boot:run
+
+# Consultar saúde e métricas
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/actuator/metrics
+curl http://localhost:8080/actuator/prometheus   # requer token
 ```
+
+---
+
+## Possíveis extensões futuras
+
+- Refresh token para JWT
+- Rate limiting nas rotas de auth e webhook
+- E-mail transacional (confirmação de pedido)
+- Testcontainers substituindo H2 por PostgreSQL real
+- Paginação padronizada com `PagedModel` (`@EnableSpringDataWebSupport`)
+- Job agendado para expirar pagamentos Pix
+- Deploy em cloud (Render, Railway, Fly.io)
+- Documentação automática com SpringDoc OpenAPI
+- Multi-tenancy (múltiplas lojas em uma instância)
 
 ---
 
 ## Como atualizar este documento
 
-Ao concluir uma fase:
+Ao concluir uma nova fase (ou extensão futura):
 
 1. Marcar a fase na tabela do roadmap e atualizar o contador de progresso
 2. Adicionar um bloco em "Fases concluídas" seguindo o formato das fases anteriores

@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/H2-tests-005571?style=for-the-badge&logo=databricks&logoColor=white" alt="H2" />
   <img src="https://img.shields.io/badge/Flyway-migrations-CC0200?style=for-the-badge&logo=flyway&logoColor=white" alt="Flyway" />
   <img src="https://img.shields.io/badge/JWT-HS256-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT" />
-  <img src="https://img.shields.io/badge/Tests-80_passing-2ea44f?style=for-the-badge&logo=junit5&logoColor=white" alt="80 testes" />
+  <img src="https://img.shields.io/badge/Tests-116_passing-2ea44f?style=for-the-badge&logo=junit5&logoColor=white" alt="116 testes" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT" />
 </p>
 
@@ -41,7 +41,7 @@ O objetivo é servir como **referência de arquitetura** para projetos Spring Bo
 - ✅ **Cálculo de frete** por região (prefixo do CEP) e frete grátis
 - ✅ **Pagamento Pix** com payload copia-e-cola + QR Code base64
 - ✅ **Tratamento de erros** centralizado (`@RestControllerAdvice`)
-- ✅ **80 testes automatizados** (JUnit 5 + MockMvc + H2)
+- ✅ **116 testes automatizados** (JUnit 5 + MockMvc + H2)
 - 🔜 Pagamento por cartão (Stripe) — em desenvolvimento
 - 🔜 Painel administrativo, cache Redis e dashboard de métricas
 
@@ -127,7 +127,7 @@ A aplicação sobe em **http://localhost:8080**.
 ### 4. Rodar os testes
 
 ```bash
-./mvnw test            # 80 testes (JUnit + MockMvc + H2)
+./mvnw test            # 116 testes (JUnit + MockMvc + H2)
 ./mvnw clean test      # limpa + roda tudo (recomendado após mudanças de schema)
 ```
 
@@ -300,7 +300,7 @@ loja-api/
 | 13 | Cache Redis no catálogo | ⏳ |
 | 14 | Dashboard de métricas | ⏳ |
 
-**Progresso:** 11/14 fases (79%) · 80 testes verdes
+**Progresso:** 11/14 fases (79%) · 116 testes verdes
 
 ---
 
