@@ -1,0 +1,775 @@
+{
+  "info": {
+    "name": "Loja API",
+    "description": "Collection completa da Loja API (Spring Boot 3.4 + Java 21).\n\n## Setup\n\n1. Suba o backend: `./run-dev.sh` (base: http://localhost:8080)\n2. Configure o `baseUrl` nas variáveis da collection se necessário.\n3. Rode **Auth → Register User** e **Auth → Login (User)** — o token é salvo em `{{accessToken}}`.\n4. Para testar endpoints **ADMIN**, registre o admin, promova-o no banco e faça login:\n\n```sql\nUPDATE users SET role = 'ADMIN' WHERE email = 'admin@example.com';\n```\n\n5. Rode o restante na ordem: Products → Cart → Orders → Shipping/Payments → Admin.\n\n## Observações\n\n- Request bodies assumem **camelCase** (padrão Jackson/Java). Se sua API usar snake_case, ajuste os bodies.\n- Endpoints marcados `(ADMIN)` exigem token de usuário com role `ADMIN`.\n- Os scripts de teste guardam IDs automaticamente nas collection variables.\n- Actuator `/metrics` e `/prometheus` exigem autenticação; `/health` e `/info` são públicos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:8080" },
+    { "key": "accessToken",  "value": "" },
+    { "key": "userEmail",    "value": "user@example.com" },
+    { "key": "userPassword", "value": "senha12345" },
+    { "key": "adminEmail",   "value": "admin@example.com" },
+    { "key": "adminPassword","value": "senha12345" },
+    { "key": "userId",       "value": "1" },
+    { "key": "productId",    "value": "1" },
+    { "key": "cartItemId",   "value": "1" },
+    { "key": "orderId",      "value": "1" },
+    { "key": "paymentId",    "value": "1" },
+    { "key": "couponCode",   "value": "BEMVINDO10" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Cadastro e login. Endpoints públicos (noauth).",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('userId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuário Teste\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "auth": { "type": "noauth" },
+            "description": "Cria um usuário comum. Senha mínima: 8 caracteres. Retorna 409 se o e-mail já existir."
+          }
+        },
+        {
+          "name": "Login (User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', body.access_token);",
+                  "  console.log('User token salvo.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "auth": { "type": "noauth" },
+            "description": "Retorna `access_token` (snake_case). O teste salva o token em `{{accessToken}}`."
+          }
+        },
+        {
+          "name": "Register Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin Teste\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "auth": { "type": "noauth" },
+            "description": "Cria o usuário admin. Depois de criado, promova-o no banco:\n\nUPDATE users SET role = 'ADMIN' WHERE email = 'admin@example.com';"
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', body.access_token);",
+                  "  console.log('Admin token salvo (substitui o token de usuário).');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "auth": { "type": "noauth" },
+            "description": "Login do admin. SUBSTITUI `{{accessToken}}` — rode antes dos testes admin."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('userId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Retorna o usuário logado (extraído do JWT). Salva `userId`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products (paged + filters)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?page=0&size=10&category=&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" },
+                { "key": "category", "value": "" },
+                { "key": "search", "value": "" }
+              ]
+            },
+            "description": "Lista paginada. Sort padrão: `name` asc. Cache Redis (TTL 5 min)."
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Product (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('productId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Camiseta Preta\",\n  \"description\": \"Camiseta 100% algodão\",\n  \"price\": 59.90,\n  \"stock\": 100,\n  \"category\": \"Roupas\",\n  \"imageUrl\": \"https://placehold.co/400\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            },
+            "description": "Requer role ADMIN. Salva `productId`."
+          }
+        },
+        {
+          "name": "Update Product (ADMIN)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Camiseta Preta (v2)\",\n  \"description\": \"Modelagem atualizada\",\n  \"price\": 69.90,\n  \"stock\": 80,\n  \"category\": \"Roupas\",\n  \"imageUrl\": \"https://placehold.co/400\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Requer role ADMIN. Dispara `@CacheEvict`."
+          }
+        },
+        {
+          "name": "Delete Product (ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Requer role ADMIN. Publica `ProductEvent(active=false)` no indexer do RAG."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Add to Cart",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sucesso', () => pm.response.to.be.success);",
+                  "const body = pm.response.json();",
+                  "if (body.items && body.items.length) pm.collectionVariables.set('cartItemId', body.items[body.items.length - 1].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "items"]
+            },
+            "description": "Adiciona item ao carrinho do usuário logado. Unique `(user_id, product_id)`."
+          }
+        },
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart"]
+            },
+            "description": "Retorna carrinho com totais calculados por `CartCalculator`."
+          }
+        },
+        {
+          "name": "Update Cart Item",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/items/{{cartItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "items", "{{cartItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart/items/{{cartItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "items", "{{cartItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart"]
+            },
+            "description": "Esvazia o carrinho do usuário logado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order (checkout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sucesso', () => pm.response.to.be.success);",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('orderId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders?couponCode={{couponCode}}&cep=60000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "couponCode", "value": "{{couponCode}}" },
+                { "key": "cep", "value": "60000000" }
+              ]
+            },
+            "description": "Cria pedido a partir do carrinho. Valida estoque, aplica cupom (opcional) e frete pelo CEP. Gera snapshot de preços. Incrementa `loja.orders.created`. Salva `orderId`."
+          }
+        },
+        {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status (ADMIN)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAID\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}", "status"]
+            },
+            "description": "Requer role ADMIN. Valores comuns: PENDING, PAID, SHIPPED, DELIVERED, CANCELLED."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "item": [
+        {
+          "name": "Create Coupon (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{couponCode}}\",\n  \"discountType\": \"PERCENTAGE\",\n  \"discountValue\": 10,\n  \"minOrderValue\": 100.00,\n  \"maxUses\": 100,\n  \"expiresAt\": \"2025-12-31T23:59:59\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/coupons",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupons"]
+            },
+            "description": "Requer role ADMIN. `discountType`: PERCENTAGE ou FIXED (valor absoluto)."
+          }
+        },
+        {
+          "name": "Get Coupon by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/coupons/{{couponCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupons", "{{couponCode}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipping",
+      "item": [
+        {
+          "name": "Quote Shipping",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cep\": \"60000000\",\n  \"subtotal\": 250.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shipping/quote",
+              "host": ["{{baseUrl}}"],
+              "path": ["shipping", "quote"]
+            },
+            "description": "Tabela por prefixo de CEP. Frete grátis acima de R$ 200. Ajuste o body conforme o DTO `ShippingQuoteRequest` do projeto."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Pix Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sucesso', () => pm.response.to.be.success);",
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('paymentId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/payments?orderId={{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments"],
+              "query": [{ "key": "orderId", "value": "{{orderId}}" }]
+            },
+            "description": "Gera QR Code Pix (EMV mock, base64). Resposta inclui payload para o frontend. Salva `paymentId`."
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{paymentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "{{paymentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Payment (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{paymentId}}/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "{{paymentId}}", "confirm"]
+            },
+            "description": "Requer role ADMIN. Incrementa `loja.payments.confirmed`."
+          }
+        },
+        {
+          "name": "Create Card Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.id) pm.collectionVariables.set('paymentId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cardNumber\": \"4242424242424242\",\n  \"expMonth\": 12,\n  \"expYear\": 2030,\n  \"cvc\": \"123\",\n  \"holderName\": \"João Silva\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payments/card?orderId={{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "card"],
+              "query": [{ "key": "orderId", "value": "{{orderId}}" }]
+            },
+            "description": "Stripe mock. Salva `paymentId`. Em produção, o SDK `com.stripe:stripe-java` precisará ser adicionado ao pom."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Todos os requests exigem token de usuário com role ADMIN (rode Auth → Login (Admin) antes).",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "List All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "orders"]
+            }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{userId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "{{userId}}", "role"]
+            },
+            "description": "Guarda-corpo contra auto-rebaixamento: você não pode remover seu próprio ADMIN."
+          }
+        },
+        {
+          "name": "Low Stock Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/products/low-stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "products", "low-stock"]
+            }
+          }
+        },
+        {
+          "name": "Restock Product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/products/{{productId}}/restock",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "products", "{{productId}}", "restock"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Actuator",
+      "item": [
+        {
+          "name": "Health (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Info (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "info"]
+            },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Metrics (auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "metrics"]
+            }
+          }
+        },
+        {
+          "name": "Prometheus (auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Stripe-Signature", "value": "t=123,v1=abc", "description": "Assinatura mock — ajuste se o gateway real for plugado." }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_123\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_123\",\n      \"metadata\": {\n        \"paymentId\": \"{{paymentId}}\"\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/stripe",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "stripe"]
+            },
+            "auth": { "type": "noauth" },
+            "description": "Webhook idempotente. O mock aceita qualquer payload; em produção real, valida `Stripe-Signature` contra o segredo do endpoint."
+          }
+        }
+      ]
+    }
+  ]
+}
