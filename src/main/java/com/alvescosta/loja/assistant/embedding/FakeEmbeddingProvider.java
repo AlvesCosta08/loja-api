@@ -32,7 +32,8 @@ public class FakeEmbeddingProvider implements EmbeddingProvider {
             vetor[i] = random.nextFloat() * 2 - 1; // [-1, 1]
         }
 
-        return normalizarL2(vetor);
+        // Reutiliza o utilitário testado
+        return Vectors.normalizarL2(vetor);
     }
 
     private long hashToSeed(String text) {
@@ -47,19 +48,5 @@ public class FakeEmbeddingProvider implements EmbeddingProvider {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 indisponível", e);
         }
-    }
-
-    private float[] normalizarL2(float[] v) {
-        double soma = 0;
-        for (float x : v) soma += x * x;
-        double norma = Math.sqrt(soma);
-
-        if (norma == 0) return v;
-
-        float[] out = new float[v.length];
-        for (int i = 0; i < v.length; i++) {
-            out[i] = (float) (v[i] / norma);
-        }
-        return out;
     }
 }
