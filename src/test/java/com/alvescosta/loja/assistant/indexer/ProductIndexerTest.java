@@ -26,15 +26,12 @@ class ProductIndexerTest {
     }
 
     @Test
-    void deve_indexar_produto_ao_receber_evento_de_criacao() {
-        // Arrange
+    void deve_indexar_produto_quando_evento_ativo() {
         when(embeddingProvider.embed("Camiseta de algodão")).thenReturn(new float[]{1, 0});
         var evento = new ProductEvent(1L, "Camiseta de algodão", "Roupas", true);
 
-        // Act
-        indexer.onProductCreated(evento);
+        indexer.onProductEvent(evento);
 
-        // Assert
         verify(embeddingProvider).embed("Camiseta de algodão");
         verify(vectorStore).upsert(eq("product:1"), eq(new float[]{1, 0}), anyMap());
     }
@@ -42,14 +39,11 @@ class ProductIndexerTest {
     @Test
     @SuppressWarnings("unchecked")
     void deve_incluir_metadados_no_vetor_indexado() {
-        // Arrange
         when(embeddingProvider.embed(anyString())).thenReturn(new float[]{1, 0});
         var evento = new ProductEvent(42L, "Notebook", "Eletrônicos", true);
 
-        // Act
-        indexer.onProductCreated(evento);
+        indexer.onProductEvent(evento);
 
-        // Assert
         ArgumentCaptor<Map<String, String>> metadataCaptor = ArgumentCaptor.forClass(Map.class);
         verify(vectorStore).upsert(eq("product:42"), any(), metadataCaptor.capture());
 
@@ -59,15 +53,12 @@ class ProductIndexerTest {
     }
 
     @Test
-    void deve_remover_produto_do_indice_ao_receber_evento_de_delecao() {
-        // Arrange
+    void deve_remover_produto_quando_evento_inativo() {
         var evento = new ProductEvent(1L, "Camiseta", "Roupas", false);
 
-        // Act
-        indexer.onProductDeleted(evento);
+        indexer.onProductEvent(evento);
 
-        // Assert
         verify(vectorStore).delete("product:1");
-        verifyNoInteractions(embeddingProvider); // Não deve gerar embedding ao deletar
+        verifyNoInteractions(embeddingProvider);
     }
 }

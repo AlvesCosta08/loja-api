@@ -19,27 +19,24 @@ public class ProductIndexer {
     }
 
     @EventListener
-    public void onProductCreated(ProductEvent event) {
-        if (!event.active()) {
-            return;
+    public void onProductEvent(ProductEvent event) {
+        if (event.active()) {
+            index(event);
+        } else {
+            remove(event);
         }
-        
-        // Gera o embedding a partir do nome do produto
+    }
+
+    private void index(ProductEvent event) {
         float[] vector = embeddingProvider.embed(event.name());
-        
-        // Metadados para facilitar o filtro/contexto na busca
         Map<String, String> metadata = Map.of(
             "name", event.name(),
             "category", event.category() != null ? event.category() : "Sem categoria"
         );
-        
-        // Upsert no VectorStore com ID prefixado
         vectorStore.upsert("product:" + event.id(), vector, metadata);
     }
 
-    @EventListener
-    public void onProductDeleted(ProductEvent event) {
-        // Apenas remove do índice, sem gerar embedding
+    private void remove(ProductEvent event) {
         vectorStore.delete("product:" + event.id());
     }
 }
