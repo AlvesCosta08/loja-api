@@ -1,5 +1,6 @@
 package com.alvescosta.loja.service;
 
+import com.alvescosta.loja.assistant.indexer.ProductEvent;
 import com.alvescosta.loja.domain.Product;
 import com.alvescosta.loja.dto.ProductRequest;
 import com.alvescosta.loja.dto.ProductResponse;
@@ -8,6 +9,7 @@ import com.alvescosta.loja.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @CacheEvict(value = {"products", "productLists"}, allEntries = true)
     @Transactional
@@ -29,7 +32,14 @@ public class ProductService {
                 .category(request.category())
                 .imageUrl(request.imageUrl())
                 .build();
-        return ProductResponse.from(productRepository.save(p));
+
+        Product saved = productRepository.save(p);
+
+        eventPublisher.publishEvent(
+                new ProductEvent(saved.getId(), saved.getName(), saved.getCategory(), true)
+        );
+
+        return ProductResponse.from(saved);
     }
 
     @Cacheable(value = "products", key = "#id")
@@ -69,7 +79,14 @@ public class ProductService {
         p.setStock(request.stock());
         p.setCategory(request.category());
         p.setImageUrl(request.imageUrl());
-        return ProductResponse.from(productRepository.save(p));
+
+        Product saved = productRepository.save(p);
+
+        eventPublisher.publishEvent(
+                new ProductEvent(saved.getId(), saved.getName(), saved.getCategory(), true)
+        );
+
+        return ProductResponse.from(saved);
     }
 
     @CacheEvict(value = {"products", "productLists"}, allEntries = true)
@@ -77,6 +94,10 @@ public class ProductService {
     public void delete(Long id) {
         Product p = getOrThrow(id);
         productRepository.delete(p);
+
+        eventPublisher.publishEvent(
+                new ProductEvent(p.getId(), p.getName(), p.getCategory(), false)
+        );
     }
 
     private Product getOrThrow(Long id) {
