@@ -4,35 +4,33 @@ services:
     image: postgres:16
     container_name: loja-postgres
     environment:
-      POSTGRES_DB: loja_db
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: Caf74@08
+      POSTGRES_DB: ${DB_NAME:-loja}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
       - loja-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d loja_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-loja}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  loja-api:
-    image: loja-api-test
-    container_name: loja-api
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/loja_db
-      SPRING_DATASOURCE_USERNAME: app
-      SPRING_DATASOURCE_PASSWORD: Caf74@08
+  redis:
+    image: redis:7-alpine
+    container_name: loja-redis
     ports:
-      - "8080:8080"
+      - "${REDIS_PORT:-6379}:6379"
     networks:
       - loja-net
-    depends_on:
-      postgres:
-        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 networks:
   loja-net:

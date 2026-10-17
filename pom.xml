@@ -5,9 +5,6 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- ============================ -->
-    <!-- HERANÇA — Spring Boot Parent  -->
-    <!-- ============================ -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -15,12 +12,9 @@
         <relativePath/>
     </parent>
 
-    <!-- ============================ -->
-    <!-- IDENTIDADE DO PROJETO         -->
-    <!-- ============================ -->
     <groupId>com.alvescosta</groupId>
     <artifactId>loja-api</artifactId>
-    <version>0.10.0</version>
+    <version>0.15.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>loja-api</name>
@@ -28,9 +22,6 @@
     <url>https://github.com/AlvesCosta08/loja-api</url>
     <inceptionYear>2026</inceptionYear>
 
-    <!-- ============================ -->
-    <!-- LICENÇA                       -->
-    <!-- ============================ -->
     <licenses>
         <license>
             <name>MIT License</name>
@@ -40,14 +31,11 @@
         </license>
     </licenses>
 
-    <!-- ============================ -->
-    <!-- AUTORES / EQUIPE              -->
-    <!-- ============================ -->
     <developers>
         <developer>
             <id>AlvesCosta08</id>
             <name>Alves Costa</name>
-            <email>SEU-EMAIL-REAL</email>
+            <email>SEU_EMAIL_REAL_AQUI</email>
             <url>https://github.com/AlvesCosta08</url>
             <organization>Alves Costa</organization>
             <organizationUrl>https://github.com/AlvesCosta08</organizationUrl>
@@ -60,9 +48,6 @@
         </developer>
     </developers>
 
-    <!-- ============================ -->
-    <!-- CONTROLE DE VERSÃO            -->
-    <!-- ============================ -->
     <scm>
         <connection>scm:git:git://github.com/AlvesCosta08/loja-api.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/AlvesCosta08/loja-api.git</developerConnection>
@@ -70,9 +55,6 @@
         <tag>HEAD</tag>
     </scm>
 
-    <!-- ============================ -->
-    <!-- ISSUES / CI                   -->
-    <!-- ============================ -->
     <issueManagement>
         <system>GitHub Issues</system>
         <url>https://github.com/AlvesCosta08/loja-api/issues</url>
@@ -83,74 +65,58 @@
         <url>https://github.com/AlvesCosta08/loja-api/actions</url>
     </ciManagement>
 
-    <!-- ============================ -->
-    <!-- PROPRIEDADES                  -->
-    <!-- ============================ -->
     <properties>
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <!-- Versões de dependências gerenciadas -->
         <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.36</lombok.version>
     </properties>
 
-    <!-- ============================ -->
-    <!-- DEPENDÊNCIAS                  -->
-    <!-- ============================ -->
     <dependencies>
 
-        <!-- Web MVC (REST) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring Security (JWT, filtros, roles) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- JPA / Hibernate -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- Cache — abstração e auto-configuração (@Cacheable, CacheManager) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
-        <!-- Redis — backend de cache em produção -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- Bean Validation (@NotBlank, @Email, etc.) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Actuator (/health, /metrics) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Micrometer Prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
-        <!-- Flyway (migrations) -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -160,7 +126,6 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- JWT (JJWT 0.12.6) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -179,21 +144,18 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Driver JDBC PostgreSQL (produção) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- H2 — banco em memória usado nos testes -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -201,9 +163,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ============================ -->
-        <!-- TESTES                        -->
-        <!-- ============================ -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -217,15 +176,11 @@
 
     </dependencies>
 
-    <!-- ============================ -->
-    <!-- BUILD                         -->
-    <!-- ============================ -->
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
 
         <plugins>
 
-            <!-- Compilador + Lombok como annotation processor -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -242,7 +197,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Empacota como .jar executável (Spring Boot) -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -256,7 +210,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Surefire: relatórios de testes -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
