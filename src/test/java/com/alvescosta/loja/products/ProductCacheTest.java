@@ -1,29 +1,31 @@
 package com.alvescosta.loja.products;
 
 import com.alvescosta.loja.domain.Product;
-import com.alvescosta.loja.dto.ProductRequest;
 import com.alvescosta.loja.repository.ProductRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,19 +34,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProductCacheTest {
 
     @Autowired MockMvc mockMvc;
-    @Autowired ObjectMapper objectMapper;
-    @Autowired ProductRepository productRepository;
-    @SpyBean ProductRepository productRepositorySpy;
-    @Autowired PasswordEncoder passwordEncoder;
     @Autowired CacheManager cacheManager;
+
+    // Um único campo: o spy substitui o bean real do repositório
+    @MockitoSpyBean ProductRepository productRepository;
 
     private Product product;
 
     @BeforeEach
     void setup() {
         // Limpa todos os caches antes de cada teste
-        cacheManager.getCacheNames()
-                .forEach(name -> cacheManager.getCache(name).clear());
+        cacheManager.getCacheNames().forEach(name -> {
+            Cache cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
+            }
+        });
 
         productRepository.deleteAll();
 
@@ -53,7 +58,7 @@ class ProductCacheTest {
                 .stock(10).category("Eletronicos").build());
 
         // Zera o contador de invocações do spy
-        clearInvocations(productRepositorySpy);
+        clearInvocations(productRepository);
     }
 
     @Test
@@ -63,24 +68,24 @@ class ProductCacheTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Notebook"));
 
-        verify(productRepositorySpy, times(1)).findById(product.getId());
+        verify(productRepository, times(1)).findById(product.getId());
     }
 
     @Test
     @DisplayName("Segunda chamada idêntica NÃO consulta o banco")
     void segundaChamadaUsaCache() throws Exception {
-        // Primeira chamada — popula o cache
+        // Primeira chamada: popula o cache
         mockMvc.perform(get("/products/" + product.getId()))
                 .andExpect(status().isOk());
 
-        clearInvocations(productRepositorySpy);
+        clearInvocations(productRepository);
 
-        // Segunda chamada — deve bater no cache
+        // Segunda chamada: deve bater no cache
         mockMvc.perform(get("/products/" + product.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Notebook"));
 
-        verify(productRepositorySpy, never()).findById(anyLong());
+        verify(productRepository, never()).findById(anyLong());
     }
 
     @Test
@@ -100,37 +105,43 @@ class ProductCacheTest {
     }
 
     @Test
-    @DisplayName("PUT invalida o cache do item")
+    @DisplayName("Após limpar o cache, o GET consulta o banco de novo")
     void updateInvalidaCache() throws Exception {
+        // ATENÇÃO: este teste NÃO valida o @CacheEvict do PUT; ele limpa o cache à mão.
         // Popula o cache
         mockMvc.perform(get("/products/" + product.getId()));
 
-        // Atualiza (usa repository direto pra não lidar com auth de ADMIN)
+        // Atualiza direto no repositório (evita lidar com auth de ADMIN)
         product.setName("Notebook Pro");
         product.setPrice(new BigDecimal("3000.00"));
         productRepository.save(product);
 
-        // Simula uma chamada de update via service — limpa cache
-        cacheManager.getCache("products").clear();
+        Cache cache = cacheManager.getCache("products");
+        assertThat(cache).isNotNull();
+        cache.clear();
 
-        clearInvocations(productRepositorySpy);
+        clearInvocations(productRepository);
 
-        // GET após update precisa consultar o banco novamente
+        // GET após limpar o cache precisa consultar o banco novamente
         mockMvc.perform(get("/products/" + product.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Notebook Pro"));
 
-        verify(productRepositorySpy, times(1)).findById(product.getId());
+        verify(productRepository, times(1)).findById(product.getId());
     }
 
     @Test
-    @DisplayName("DELETE limpa cache do item")
+    @DisplayName("Após limpar o cache, produto removido retorna 404")
     void deleteLimpaCache() throws Exception {
+        // ATENÇÃO: este teste NÃO valida o @CacheEvict do DELETE; ele limpa o cache à mão.
         // Popula
         mockMvc.perform(get("/products/" + product.getId()));
 
         productRepository.deleteAll();
-        cacheManager.getCache("products").clear();
+
+        Cache cache = cacheManager.getCache("products");
+        assertThat(cache).isNotNull();
+        cache.clear();
 
         mockMvc.perform(get("/products/" + product.getId()))
                 .andExpect(status().isNotFound());
@@ -143,14 +154,14 @@ class ProductCacheTest {
         mockMvc.perform(get("/products").param("category", "Eletronicos"))
                 .andExpect(status().isOk());
 
-        clearInvocations(productRepositorySpy);
+        clearInvocations(productRepository);
 
-        // Mesma combinação — deve usar cache
+        // Mesma combinação: deve usar cache
         mockMvc.perform(get("/products").param("category", "Eletronicos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("Notebook"));
 
-        verify(productRepositorySpy, never())
+        verify(productRepository, never())
                 .findByCategoryIgnoreCase(any(), any());
     }
 
@@ -161,20 +172,20 @@ class ProductCacheTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
 
-        clearInvocations(productRepositorySpy);
+        clearInvocations(productRepository);
 
         mockMvc.perform(get("/products").param("category", "Inexistente"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
 
-        verify(productRepositorySpy, never())
+        verify(productRepository, never())
                 .findByCategoryIgnoreCase(any(), any());
     }
 
     @Test
     @DisplayName("Caches configurados existem")
     void cachesConfiguradosExistem() {
-        assert cacheManager.getCache("products") != null;
-        assert cacheManager.getCache("productLists") != null;
+        assertThat(cacheManager.getCache("products")).isNotNull();
+        assertThat(cacheManager.getCache("productLists")).isNotNull();
     }
 }

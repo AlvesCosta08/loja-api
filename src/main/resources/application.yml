@@ -19,19 +19,18 @@ spring:
     baseline-version: 0
 
   cache:
+    type: redis
     redis:
       time-to-live: 5m
       cache-null-values: false
 
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      ssl:
-        enabled: ${REDIS_SSL:false}
+      url: ${REDIS_URL:redis://localhost:6379}
       timeout: 3000ms
       connect-timeout: 3000ms
+      repositories:
+        enabled: false
 
   servlet:
     multipart:
@@ -48,6 +47,8 @@ cors:
 
 server:
   port: ${PORT:${SERVER_PORT:8080}}
+  shutdown: graceful
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -57,6 +58,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      probes:
+        enabled: true
 
 info:
   app:

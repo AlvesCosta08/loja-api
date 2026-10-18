@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:loja;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    url: jdbc:h2:mem:loja-${random.uuid};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
     username: sa
     password: ""
     driver-class-name: org.h2.Driver
@@ -15,13 +15,6 @@ spring:
     enabled: false
   cache:
     type: simple
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: ""
-      ssl:
-        enabled: false
 
 jwt:
   secret: test-secret-with-at-least-32-characters-for-h2-tests
