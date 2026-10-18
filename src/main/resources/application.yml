@@ -21,7 +21,7 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
-  # 👇 AQUI: removida a linha `type: ${CACHE_TYPE:redis}`
+  # 👇 Removido spring.cache.type para evitar binding precoce no Spring Boot 3.4
   cache:
     redis:
       time-to-live: 5m
@@ -51,7 +51,7 @@ cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
 
 management:
   endpoints:
