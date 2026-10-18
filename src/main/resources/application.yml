@@ -11,9 +11,6 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
-    properties:
-      hibernate:
-        format_sql: true
 
   flyway:
     enabled: true
@@ -21,7 +18,6 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
-  # 👇 Removido spring.cache.type para evitar binding precoce no Spring Boot 3.4
   cache:
     redis:
       time-to-live: 5m
@@ -61,15 +57,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-  metrics:
-    tags:
-      application: ${spring.application.name}
-  info:
-    env:
-      enabled: true
 
 info:
   app:
     name: Loja API
-    description: API REST de e-commerce com camada de IA (RAG em desenvolvimento)
     version: 0.15.0-SNAPSHOT
