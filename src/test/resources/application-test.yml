@@ -1,36 +1,40 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:loja_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:loja;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     username: sa
     password: ""
+    driver-class-name: org.h2.Driver
   jpa:
     hibernate:
       ddl-auto: create-drop
     open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
   flyway:
     enabled: false
   cache:
     type: simple
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ""
+      ssl:
+        enabled: false
 
 jwt:
-  secret: test-secret-key-with-at-least-32-chars-ok
+  secret: test-secret-with-at-least-32-characters-for-h2-tests
   expiration-ms: 3600000
+
+cors:
+  allowed-origins: http://localhost:5173
+
+server:
+  port: 0
 
 management:
   endpoints:
     web:
       exposure:
         include: health, info, metrics, prometheus
-  endpoint:
-    prometheus:
-      enabled: true
-    metrics:
-      enabled: true
-  health:
-    redis:
-      enabled: false
-  prometheus:
-    metrics:
-      export:
-        enabled: true

@@ -2,7 +2,9 @@ package com.alvescosta.loja.config;
 
 import com.alvescosta.loja.security.JwtAuthFilter;
 import com.alvescosta.loja.security.RestAuthenticationEntryPoint;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,8 +23,35 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final String DEFAULT_JWT_SECRET =
+            "change-me-in-production-with-at-least-32-chars";
+
     private final JwtAuthFilter jwtAuthFilter;
     private final RestAuthenticationEntryPoint entryPoint;
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    /**
+     * Falha o boot se o JWT_SECRET default estiver sendo usado em produção.
+     * Detecta produção por: env RENDER=true (Render injeta) OU
+     * SPRING_PROFILES_ACTIVE=prod/production.
+     */
+    @PostConstruct
+    void validateJwtSecret() {
+        if (DEFAULT_JWT_SECRET.equals(jwtSecret)) {
+            String profile = System.getenv("SPRING_PROFILES_ACTIVE");
+            boolean isProd = "true".equalsIgnoreCase(System.getenv("RENDER"))
+                    || "prod".equalsIgnoreCase(profile)
+                    || "production".equalsIgnoreCase(profile);
+            if (isProd) {
+                throw new IllegalStateException(
+                        "JWT_SECRET não configurado em produção. " +
+                        "Defina a env var JWT_SECRET com pelo menos 32 caracteres " +
+                        "(ex: openssl rand -base64 48).");
+            }
+        }
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

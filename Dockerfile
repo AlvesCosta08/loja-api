@@ -33,4 +33,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
+# Fallback de porta (Render injeta $PORT; SERVER_PORT tem prioridade no YAML)
+ENV SERVER_PORT=8080
+
 ENTRYPOINT ["java", "-jar", "app.jar"]
