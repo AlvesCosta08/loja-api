@@ -11,4 +11,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findFirstByOrderIdAndStatus(Long orderId, PaymentStatus status);
 
     Optional<Payment> findByGatewayRef(String gatewayRef);
+
+    Optional<Payment> findFirstByOrderIdOrderByCreatedAtDesc(Long orderId);
 }

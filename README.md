@@ -1,6 +1,6 @@
 # 🛒 Loja API
 
-> API REST de e-commerce construída com **Java 21** e **Spring Boot 3.4**, seguindo **TDD estrito** (Red → Green → Refactor). Cobre autenticação JWT, catálogo com cache Redis, carrinho persistente, checkout com snapshot de preços, cupons, frete, pagamentos Pix e cartão (Stripe mock), painel administrativo e dashboard de métricas.
+> API REST de e-commerce construída com **Java 21** e **Spring Boot 3.4**, seguindo **TDD estrito** (Red → Green → Refactor). Cobre autenticação JWT, catálogo com cache Redis, carrinho persistente, checkout com snapshot de preços, cupons, frete, pagamentos Pix e cartão (Stripe mock), painel administrativo, dashboard de métricas e **fundação do RAG** (busca semântica com embeddings).
 
 <p align="left">
   <img src="https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21" />
@@ -12,7 +12,8 @@
   <img src="https://img.shields.io/badge/Flyway-migrations-CC0200?style=for-the-badge&logo=flyway&logoColor=white" alt="Flyway" />
   <img src="https://img.shields.io/badge/JWT-HS256-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT" />
   <img src="https://img.shields.io/badge/Prometheus-metrics-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" alt="Prometheus" />
-  <img src="https://img.shields.io/badge/Tests-116_passing-2ea44f?style=for-the-badge&logo=junit5&logoColor=white" alt="116 testes" />
+  <img src="https://img.shields.io/badge/Docker-dev-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Tests-150_passing-2ea44f?style=for-the-badge&logo=junit5&logoColor=white" alt="150 testes" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT" />
 </p>
 
@@ -29,6 +30,8 @@ Esta API implementa o **back-end completo de uma loja virtual** — pronto para 
 - **Segurança** — JWT stateless, BCrypt, autorização por role.
 - **Performance** — cache Redis no catálogo com invalidação em escrita.
 - **Observabilidade** — Actuator + Micrometer + Prometheus com métricas customizadas.
+- **Infra de desenvolvimento** — Docker Compose, script `run-dev.sh`, CORS configurado.
+- **Fundação do RAG** — embeddings, vector store, indexação por eventos, retriever com threshold.
 
 O objetivo é servir como **referência de arquitetura** para projetos Spring Boot reais: sem mágica, sem atalhos, com decisões justificadas.
 
@@ -46,17 +49,24 @@ O objetivo é servir como **referência de arquitetura** para projetos Spring Bo
 - ✅ **Pagamento Pix** com payload copia-e-cola + QR Code base64
 - ✅ **Pagamento com cartão** via gateway (implementação mock para Stripe)
 - ✅ **Webhook de gateway** com idempotência
+- ✅ **Consulta de pagamento por pedido** (`GET /payments?orderId=`) — F5-safe no frontend
 - ✅ **Painel administrativo** — dashboard, pedidos, usuários, produtos com estoque baixo, restock
 - ✅ **Cache Redis** no catálogo (TTL 5 min) com invalidação em `create`/`update`/`delete`
 - ✅ **Dashboard de métricas** — Micrometer + Prometheus (contadores customizados)
 - ✅ **Tratamento de erros** centralizado (`@RestControllerAdvice`)
-- ✅ **116 testes automatizados** (JUnit 5 + MockMvc + H2)
+- ✅ **CORS** configurado para o frontend (`http://localhost:5173`)
+- ✅ **Infra Docker** — `docker-compose.yml` para PostgreSQL 16 + Redis 7 com healthcheck
+- ✅ **Automação** — `run-dev.sh` com subcomandos `up`, `down`, `reset`, `db`, `mvn`
+- ✅ **Fundação do RAG** — `EmbeddingProvider`, `VectorStore`, `ProductIndexer`, `VectorRetriever`
+- ✅ **150 testes automatizados** (JUnit 5 + MockMvc + H2)
 
 ---
 
 ## 🏗️ Arquitetura
 
-```
+### Visão de alto nível
+
+```text
 ┌──────────────────┐      ┌──────────────────┐      ┌──────────────────┐
 │  Cliente         │ ───► │  API Spring Boot │ ───► │  PostgreSQL      │
 │  (Web / Mobile)  │ HTTP │  (Java 21)       │ JDBC │  + Flyway        │
@@ -69,18 +79,44 @@ O objetivo é servir como **referência de arquitetura** para projetos Spring Bo
                                    └──► Prometheus (métricas)
 ```
 
-**Fluxo de uma compra:**
+### Fluxo de uma compra (Pix)
 
-```
-/cart/items ──► /orders ──► /payments ──► /payments/{id}/confirm
-  (carrinho)   (checkout)   (Pix ou cartão)  (ADMIN confirma Pix)
-                                  ↓
-                          Pedido vira PAID
+```text
+ Cliente                  API                    DB
+   │                       │                      │
+   │  POST /cart/items     │                      │
+   │──────────────────────►│  INSERT cart_items   │
+   │                       │─────────────────────►│
+   │                       │                      │
+   │  POST /orders?cep=    │                      │
+   │──────────────────────►│  valida estoque      │
+   │                       │  decrementa estoque  │
+   │                       │  snapshot de preços  │
+   │                       │─────────────────────►│
+   │◄──────────────────────│  Order(PENDING)      │
+   │                       │                      │
+   │  POST /payments?      │                      │
+   │  orderId=1            │                      │
+   │──────────────────────►│  gera QR Pix         │
+   │                       │  INSERT payments     │
+   │                       │─────────────────────►│
+   │◄──────────────────────│  Payment(PENDING)    │
+   │                       │                      │
+   │  (cliente paga)       │                      │
+   │                       │                      │
+   │  ADMIN: POST          │                      │
+   │  /payments/1/confirm  │                      │
+   │──────────────────────►│  UPDATE payments     │
+   │                       │  UPDATE orders       │
+   │                       │─────────────────────►│
+   │                       │  Payment(CONFIRMED)  │
+   │                       │  Order(PAID)         │
+   │                       │                      │
 ```
 
-**Fluxo de autenticação (JWT):**
+### Fluxo de autenticação (JWT)
 
-```
+```text
 POST /auth/register ──► User criado (BCrypt)
 POST /auth/login    ──► TokenResponse (access_token, token_type, expires_in)
                           │
@@ -98,15 +134,51 @@ POST /auth/login    ──► TokenResponse (access_token, token_type, expires_i
                     @PreAuthorize decide
 ```
 
-**Fluxo de cache no catálogo (Redis):**
+### Fluxo de cache no catálogo (Redis)
 
-```
+```text
 GET /products/{id} ──► @Cacheable("products") ──► cache hit? ──► devolve
                                         │
                                         └─► cache miss ──► DB ──► grava no cache
 
 POST/PUT/DELETE /products ──► @CacheEvict("products", "productLists")
                                      └─► invalida ambos os caches
+```
+
+### Fluxo do RAG (indexação e busca)
+
+```text
+ProductService.create/update/delete ──► ApplicationEventPublisher
+                                              │
+                                              ▼
+                                     ProductEvent(active)
+                                              │
+                                              ▼
+                                      ProductIndexer
+                                       │          │
+                                       ▼          ▼
+                                  (active)    (!active)
+                                       │          │
+                                       ▼          ▼
+                              embed() + upsert   delete()
+                                       │          │
+                                       ▼          ▼
+                              InMemoryVectorStore (ConcurrentHashMap)
+
+Query ──► embed(query) ──► search(topK*2) ──► filtro threshold ──► topK
+```
+
+### Modelo de dados (ER simplificado)
+
+```text
+User ────┬──< CartItem >──── Product
+         │                       │
+         │                       │
+         └──< Order >────< OrderItem (snapshot)
+                  │
+                  └──< Payment
+
+Coupon ──(opcional)── Order
 ```
 
 ---
@@ -127,6 +199,8 @@ POST/PUT/DELETE /products ──► @CacheEvict("products", "productLists")
 | **Boilerplate** | Lombok 1.18.36 |
 | **Build** | Maven (com Wrapper) |
 | **Testes** | JUnit 5 + MockMvc + AssertJ |
+| **Infra Dev** | Docker + Docker Compose + `run-dev.sh` |
+| **RAG (fundação)** | `EmbeddingProvider` + `VectorStore` (in-memory) + `ProductIndexer` + `VectorRetriever` |
 | **Encoding de erros** | `@RestControllerAdvice` + JSON `{status, error, message}` |
 
 ---
@@ -136,10 +210,8 @@ POST/PUT/DELETE /products ──► @CacheEvict("products", "productLists")
 ### Pré-requisitos
 
 - **JDK 21** (`java -version` deve mostrar 21.x)
-- **Maven** (ou use o Wrapper `./mvnw`)
-- **PostgreSQL 16** (para produção)
-- **Redis 7** (para produção — cache)
-- **Git**
+- **Docker + Docker Compose** (para PostgreSQL e Redis)
+- **Maven Wrapper** (incluído no projeto)
 
 ### 1. Clonar o repositório
 
@@ -148,33 +220,44 @@ git clone https://github.com/AlvesCosta08/loja-api.git
 cd loja-api
 ```
 
-### 2. Configurar o PostgreSQL (produção)
+### 2. Configurar variáveis de ambiente
 
 ```bash
-createdb loja
-# opcional: exportar credenciais
-export DB_USER=postgres
-export DB_PASS=postgres
-export JWT_SECRET=$(openssl rand -base64 48)
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
+cp .env.example .env
+# Edite .env se necessário (senhas padrão: 'postgres')
 ```
 
-O schema é criado automaticamente pelas migrações Flyway em `src/main/resources/db/migration/` (V1 a V9).
-
-### 3. Rodar a API
+### 3. Rodar a aplicação (automático)
 
 ```bash
-./mvnw spring-boot:run
+./run-dev.sh
 ```
+
+O script:
+1. Carrega `.env`
+2. Sobe PostgreSQL + Redis via Docker Compose
+3. Aguarda o healthcheck do Postgres (`pg_isready`)
+4. Roda as migrações Flyway
+5. Inicia o Spring Boot
 
 A aplicação sobe em **http://localhost:8080**.
 
 ### 4. Rodar os testes
 
 ```bash
-./mvnw test            # 116 testes (JUnit + MockMvc + H2)
+./mvnw test            # 150 testes (JUnit + MockMvc + H2)
 ./mvnw clean test      # limpa + roda tudo (recomendado após mudanças de schema)
+```
+
+### Subcomandos do `run-dev.sh`
+
+```bash
+./run-dev.sh up        # sobe docker + app
+./run-dev.sh down      # derruba serviços
+./run-dev.sh reset     # limpa banco e sobe de novo
+./run-dev.sh db info   # flyway info
+./run-dev.sh db migrate
+./run-dev.sh mvn test  # roda os testes
 ```
 
 ---
@@ -183,12 +266,15 @@ A aplicação sobe em **http://localhost:8080**.
 
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
+| `DB_URL` | URL JDBC do PostgreSQL | `jdbc:postgresql://localhost:5432/loja` |
 | `DB_USER` | Usuário do PostgreSQL | `postgres` |
 | `DB_PASS` | Senha do PostgreSQL | `postgres` |
 | `REDIS_HOST` | Host do Redis | `localhost` |
 | `REDIS_PORT` | Porta do Redis | `6379` |
 | `JWT_SECRET` | Chave HMAC do JWT (**≥ 32 caracteres**) | valor de desenvolvimento |
 | `JWT_EXPIRATION_MS` | Expiração do JWT em milissegundos | `3600000` (1h) |
+| `CORS_ALLOWED_ORIGINS` | Origens permitidas para o frontend | `http://localhost:5173` |
+| `SERVER_PORT` | Porta do servidor | `8080` |
 
 > ⚠️ O segredo de desenvolvimento (`change-me-in-production-with-at-least-32-chars`) é apenas para uso local. **Em produção, sempre defina `JWT_SECRET`.**
 
@@ -242,6 +328,7 @@ A aplicação sobe em **http://localhost:8080**.
 |--------|----------|-----------|------|
 | `POST` | `/payments?orderId=` | Gera Pix | dono |
 | `GET`  | `/payments/{id}` | Consulta pagamento | dono |
+| `GET`  | `/payments?orderId=` | Último pagamento do pedido (**F5-safe**) | dono |
 | `POST` | `/payments/{id}/confirm` | Confirma pagamento Pix | ADMIN |
 | `POST` | `/payments/card?orderId=` | Gera cobrança no cartão (Stripe mock) | dono |
 | `POST` | `/webhooks/stripe` | Webhook do gateway (idempotente) | público |
@@ -292,6 +379,10 @@ curl -X POST "http://localhost:8080/orders?cep=01310100" \
 # 5) Gera Pix
 curl -X POST "http://localhost:8080/payments?orderId=1" \
   -H "Authorization: Bearer $TOKEN"
+
+# 6) (F5-safe) Recupera o pagamento do pedido após reload
+curl "http://localhost:8080/payments?orderId=1" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -316,6 +407,8 @@ Mapeamento centralizado em `GlobalExceptionHandler`:
 | `MethodArgumentNotValidException` | 400 | `Validation Failed` |
 | `UnauthorizedException` | 401 | `Unauthorized` |
 | `NotFoundException` | 404 | `Not Found` |
+
+> ⚠️ `AccessDeniedException` (403) e erros 500 ainda usam o formato default do Spring. Está registrado em "Pendências conhecidas".
 
 ### Token
 
@@ -376,7 +469,7 @@ Para cartão, `method = "CREDIT_CARD"` e os campos `gatewayRef` e `clientSecret`
 
 ## 🧪 Testes
 
-A suíte cobre **116 cenários** distribuídos em 12 classes:
+A suíte cobre **150 cenários** distribuídos em **21 classes**:
 
 | Suite | Testes | Cobertura |
 |-------|-------:|-----------|
@@ -384,15 +477,23 @@ A suíte cobre **116 cenários** distribuídos em 12 classes:
 | `UserControllerTest` | 3 | Autenticação, `/users/me` |
 | `ProductControllerTest` | 14 | CRUD completo + filtros + paginação + roles |
 | `ProductCacheTest` | 8 | `@Cacheable`, `@CacheEvict`, invalidação |
+| `ProductServiceEventTest` | 2 | Publicação de eventos para o indexer |
 | `CartControllerTest` | 14 | Adicionar/atualizar/remover + estoque + carrinho alheio |
 | `OrderControllerTest` | 17 | Checkout, snapshot de preços, frete, status |
 | `CouponControllerTest` | 12 | Criação, expiração, limite de uso, valor mínimo |
 | `ShippingControllerTest` | 6 | Cotações por região + frete grátis + CEP inválido |
-| `PaymentControllerTest` | 8 | Pix, confirmação, idempotência, autorização |
+| `PaymentControllerTest` | 11 | Pix, confirmação, autorização, **consulta por pedido (F5-safe)** |
 | `CardPaymentControllerTest` | 9 | Cartão, webhook, idempotência |
 | `AdminControllerTest` | 12 | Dashboard, users, roles, low-stock, restock |
 | `MetricsTest` | 7 | Contadores customizados (`loja.orders.created`, `loja.payments.confirmed`) |
-| **Total** | **116** | ✅ todos passando |
+| `CorsConfigTest` | 3 | Configuração de CORS (validação básica) |
+| `ProductIndexerTest` | 3 | Indexação por evento (unit) |
+| `ProductIndexerIntegrationTest` | 2 | Integração com `ApplicationEventPublisher` real |
+| `EmbeddingProviderTest` | 6 | `FakeEmbeddingProvider` determinístico |
+| `VectorsTest` | 6 | `normalizarL2`, `similaridadeCosseno` |
+| `InMemoryVectorStoreTest` | 6 | `upsert`, `search`, `delete`, `clear` |
+| `VectorRetrieverTest` | 3 | `retrieve` com threshold e topK |
+| **Total** | **150** | ✅ todos passando |
 
 ```bash
 # Roda a suíte inteira
@@ -411,11 +512,15 @@ A suíte cobre **116 cenários** distribuídos em 12 classes:
 
 ## 📁 Estrutura do projeto
 
-```
+```text
 loja-api/
 ├── pom.xml
 ├── README.md
 ├── Resumo.md                                # Documento de contexto entre sessões
+├── docker-compose.yml                       # PostgreSQL 16 + Redis 7
+├── Dockerfile                               # Multi-stage (Java 21)
+├── run-dev.sh                               # Automação de dev
+├── .env.example                             # Template de variáveis
 └── src/
     ├── main/
     │   ├── java/com/alvescosta/loja/
@@ -423,6 +528,7 @@ loja-api/
     │   │   ├── config/
     │   │   │   ├── SecurityConfig.java
     │   │   │   ├── CacheConfig.java
+    │   │   │   ├── CorsConfig.java
     │   │   │   └── PrometheusMetricsConfig.java
     │   │   ├── domain/                      # 11 entidades + enums
     │   │   │   ├── User.java  Product.java  CartItem.java
@@ -447,12 +553,18 @@ loja-api/
     │   │   │   ├── PaymentService  PixGenerator
     │   │   │   ├── PaymentGateway  StripePaymentGateway
     │   │   │   ├── AdminService  MetricsService
-    │   │   └── controller/                  # 10 controllers
+    │   │   ├── controller/                  # 10 controllers
+    │   │   ├── assistant/                   # RAG (fundação)
+    │   │   │   ├── embedding/
+    │   │   │   ├── vector/
+    │   │   │   ├── indexer/
+    │   │   │   ├── retrieval/
+    │   │   │   └── config/AssistantConfig.java
     │   └── resources/
     │       ├── application.yml
     │       └── db/migration/                # V1..V9 Flyway
     └── test/
-        ├── java/com/alvescosta/loja/        # 12 suítes + 1 config
+        ├── java/com/alvescosta/loja/        # 21 suítes + 1 config
         └── resources/application-test.yml   # H2 em memória + cache simple
 ```
 
@@ -477,8 +589,18 @@ loja-api/
 | 12 | Painel administrativo (`/admin`) | ✅ |
 | 13 | Cache Redis no catálogo | ✅ |
 | 14 | Dashboard de métricas (Micrometer + Prometheus) | ✅ |
+| 15 | Infra Dev: CORS, Env Vars, Docker, Flyway Script | ✅ |
+| 16 | Fundação do RAG (7 ciclos TDD) | ✅ |
 
-**Progresso:** 14/14 fases · 116 testes verdes · 9 migrations
+**Progresso:** 16/16 fases · 150 testes verdes · 9 migrations
+
+### Roadmap de IA (visão macro)
+
+| Fase | Descrição | Status |
+|:---:|---|:---:|
+| RAG | Embedding + VectorStore + Indexer + Retriever + AssistantService | Em progresso (fundação concluída) |
+| MCP | Servidor MCP com tools (search, cart, order, payment) | Pendente |
+| Fine-tuning | Classificador de intenção + gerador de descrições | Pendente |
 
 ---
 
@@ -501,6 +623,15 @@ loja-api/
 | **Stripe mockado** (`StripePaymentGateway`) | Testa o fluxo sem depender do SDK/API externo |
 | **Coluna `discount_value`** (não `value`) | `value` é palavra reservada em SQL |
 | **`RestAuthenticationEntryPoint`** | Retorna 401 em vez do 403 default do Spring |
+| **`GET /payments?orderId`** para F5-safe | Frontend recupera o Pix após reload sem gerar duplicata |
+| **`.env` + `run-dev.sh`** | Centraliza variáveis sem hardcode; o script injeta no shell antes do Maven rodar |
+| **Docker Compose com Healthcheck** | Spring só sobe após Postgres aceitar conexões (`pg_isready`) |
+| **Flyway Maven Plugin via `run-dev.sh`** | Permite rodar `./run-dev.sh db info` e `db migrate` isoladamente |
+| **`FakeEmbeddingProvider` em `src/main`** | Determinístico, sem custo de API, reutilizável em testes e dev |
+| **`InMemoryVectorStore` como implementação padrão** | Permite TDD rápido; `PgVectorStore` entra na fase final do RAG |
+| **Eventos de domínio para indexação** | Desacopla `ProductService` de `ProductIndexer` |
+| **Um único `@EventListener` despachando por `active`** | Evita bug de dois listeners mutando o índice em sentidos opostos |
+| **`threshold` no `VectorRetriever`** | Descarta resultados com baixa similaridade, reduz ruído no contexto do LLM |
 
 ---
 
@@ -509,6 +640,7 @@ loja-api/
 - Senhas com **BCrypt** (hash + salt)
 - Tokens **JWT HS256** com expiração configurável
 - **CSRF desabilitado** (API stateless — correto para JWT)
+- **CORS** configurado via `CorsConfig` + `.cors(...)` no `SecurityConfig`
 - **`RestAuthenticationEntryPoint`** customizado → 401 em vez de 403 default
 - Autorização por **`@PreAuthorize("hasRole('ADMIN')")`** em endpoints sensíveis
 - **Validação de entrada** via Bean Validation (`@NotBlank`, `@Email`, `@Size`, `@Positive`)
@@ -518,10 +650,10 @@ loja-api/
 
 ## ⚠️ Pendências conhecidas
 
-- **CORS ainda não configurado.** O `SecurityConfig` não chama `.cors(...)` e não há `CorsConfig`. Isso **bloqueia o desenvolvimento do frontend** — o navegador vai rejeitar requisições de `http://localhost:5173`.
-- **`JWT_EXPIRATION_MS`** está hardcoded em `application.yml` (não lê env var, apesar do README antigo sugerir isso).
-- **Stripe é mock.** Para produção com Stripe real, é preciso adicionar `com.stripe:stripe-java` ao `pom.xml` e configurar `stripe.api-key` + `stripe.webhook-secret`.
-- **`GlobalExceptionHandler`** não cobre `AccessDeniedException` (403), `Exception` genérica (500), `HttpRequestMethodNotSupportedException` (405) nem `DataIntegrityViolationException` (409).
+- **`GlobalExceptionHandler`** não cobre `AccessDeniedException` (403), `Exception` genérica (500), `HttpRequestMethodNotSupportedException` (405) nem `DataIntegrityViolationException` (409). Erros 403/500 usam o formato default do Spring.
+- **Stripe é mock.** Para produção com Stripe real, adicionar `com.stripe:stripe-java` ao `pom.xml` e configurar `stripe.api-key` + `stripe.webhook-secret`.
+- **`JWT_EXPIRATION_MS`** está hardcoded em `application.yml` (não lê env var).
+- **`PgVectorStore`** ainda não existe — só `InMemoryVectorStore`. Necessário migration V10 com pgvector para produção.
 
 ---
 
@@ -547,9 +679,9 @@ Distribuído sob a licença **MIT**. Veja [LICENSE](./LICENSE) para mais detalhe
 
 **Alves Costa**
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/SEU-PERFIL-AQUI)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/alves74)
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white)](https://github.com/AlvesCosta08)
-[![Email](https://img.shields.io/badge/Email-D14836?style=flat&logo=gmail&logoColor=white)](mailto:SEU-EMAIL-AQUI)
+[![Email](https://img.shields.io/badge/Email-D14836?style=flat&logo=gmail&logoColor=white)](mailto:alvescosta74@gmail.com)
 
 ---
 

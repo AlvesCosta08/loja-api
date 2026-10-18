@@ -199,6 +199,60 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.method").value("PIX"));
     }
 
+    // ---------- BUSCAR POR ORDER (F5-safe) ----------
+
+    @Test
+    @DisplayName("200 dono busca último pagamento do pedido")
+    void donoBuscaUltimoPagamentoDoPedido() throws Exception {
+        Long orderId = criarPedido();
+
+        mockMvc.perform(post("/payments")
+                        .param("orderId", orderId.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/payments")
+                        .param("orderId", orderId.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").value(orderId))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.pixQrCodeBase64").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("404 quando pedido não tem pagamento")
+    void deveRetornar404QuandoPedidoSemPagamento() throws Exception {
+        Long orderId = criarPedido();
+
+        mockMvc.perform(get("/payments")
+                        .param("orderId", orderId.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("403 quando outro usuário tenta buscar pagamento")
+    void naoDeveBuscarPagamentoDeOutroUsuario() throws Exception {
+        Long orderId = criarPedido();
+
+        mockMvc.perform(post("/payments")
+                        .param("orderId", orderId.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isCreated());
+
+        User outro = userRepository.save(User.builder()
+                .email("outro2@test.com").name("Outro2")
+                .hashedPassword(passwordEncoder.encode("senha12345"))
+                .role(Role.CUSTOMER).build());
+        String outroToken = jwtService.generate(outro);
+
+        mockMvc.perform(get("/payments")
+                        .param("orderId", orderId.toString())
+                        .header("Authorization", "Bearer " + outroToken))
+                .andExpect(status().isForbidden());
+    }
+
     // ---------- helpers ----------
 
     private Long criarPedido() throws Exception {

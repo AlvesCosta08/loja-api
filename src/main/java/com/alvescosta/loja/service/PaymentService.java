@@ -6,7 +6,9 @@ import com.alvescosta.loja.exception.BusinessException;
 import com.alvescosta.loja.exception.NotFoundException;
 import com.alvescosta.loja.repository.OrderRepository;
 import com.alvescosta.loja.repository.PaymentRepository;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -143,6 +145,25 @@ public class PaymentService {
         if (!isAdmin && !payment.getOrder().getUser().getId().equals(userId)) {
             throw new org.springframework.security.access.AccessDeniedException("Acesso negado");
         }
+        return PaymentResponse.from(payment);
+    }
+
+    /**
+     * Busca o pagamento mais recente de um pedido. Usado pelo frontend
+     * para reidratar a tela de pagamento após F5, sem gerar duplicata.
+     */
+    @Transactional(readOnly = true)
+    public PaymentResponse findLatestByOrder(Long orderId, Long userId, boolean isAdmin) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Pedido nao encontrado"));
+
+        if (!isAdmin && !order.getUser().getId().equals(userId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Acesso negado");
+        }
+
+        Payment payment = paymentRepository.findFirstByOrderIdOrderByCreatedAtDesc(orderId)
+                .orElseThrow(() -> new NotFoundException("Pagamento nao encontrado"));
+
         return PaymentResponse.from(payment);
     }
 

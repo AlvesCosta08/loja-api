@@ -14,19 +14,17 @@ Atualizado ao final de cada fase concluída.
 5. [Roadmap — Frontend](#roadmap--frontend)
 6. [Fases concluídas — Backend](#fases-concluídas--backend)
 7. [Fases concluídas — Frontend](#fases-concluídas--frontend)
-8. [Pré-requisitos para iniciar o frontend](#pré-requisitos-para-iniciar-o-frontend)
-9. [Estrutura prevista do projeto frontend](#estrutura-prevista-do-projeto-frontend)
-10. [Contrato da API (referência para o frontend)](#contrato-da-api-referência-para-o-frontend)
-11. [Decisões técnicas — Backend](#decisões-técnicas--backend)
-12. [Decisões técnicas — Frontend](#decisões-técnicas--frontend)
-13. [Pontos de atenção herdados do backend](#pontos-de-atenção-herdados-do-backend)
-14. [Bugs encontrados e correções — Backend](#bugs-encontrados-e-correções--backend)
-15. [Bugs encontrados e correções — Frontend](#bugs-encontrados-e-correções--frontend)
-16. [Como executar — Backend](#como-executar--backend)
-17. [Como executar — Frontend](#como-executar--frontend)
-18. [Guia de implementação React — passo a passo](#guia-de-implementação-react--passo-a-passo)
-19. [Possíveis extensões futuras](#possíveis-extensões-futuras)
-20. [Como atualizar este documento](#como-atualizar-este-documento)
+8. [Arquitetura (diagramas)](#arquitetura-diagramas)
+9. [Contrato da API (referência para o frontend)](#contrato-da-api-referência-para-o-frontend)
+10. [Decisões técnicas — Backend](#decisões-técnicas--backend)
+11. [Decisões técnicas — Frontend](#decisões-técnicas--frontend)
+12. [Pontos de atenção](#pontos-de-atenção)
+13. [Bugs encontrados e correções](#bugs-encontrados-e-correções)
+14. [Como executar — Backend](#como-executar--backend)
+15. [Como executar — Frontend](#como-executar--frontend)
+16. [Próximos passos](#próximos-passos)
+17. [Possíveis extensões futuras](#possíveis-extensões-futuras)
+18. [Como atualizar este documento](#como-atualizar-este-documento)
 
 ---
 
@@ -53,8 +51,7 @@ Atualizado ao final de cada fase concluída.
 | Boilerplate | Lombok 1.18.36 |
 | Pacote base | `com.alvescosta.loja` |
 | Repositório backend | https://github.com/AlvesCosta08/loja-api |
-| Branch em progresso | `feature/rag-foundation` |
-| Última atualização backend | Fase 16 — Fundação do RAG (7 ciclos TDD) |
+| Última atualização backend | **Fase 16 — Fundação do RAG (7 ciclos TDD)** |
 
 ### Frontend
 
@@ -62,18 +59,20 @@ Atualizado ao final de cada fase concluída.
 |-------|-------|
 | Projeto | loja-web |
 | Descrição | SPA de e-commerce que consome a `loja-api` |
-| Framework | React 19 + Vite |
+| Framework | React 19 + Vite 6 |
 | Linguagem | TypeScript 5.6 |
 | Estilização | Tailwind CSS 4 (plugin `@tailwindcss/vite`) |
+| Arquitetura | **Feature-Sliced Design (FSD)** — `app/`, `shared/`, `features/` |
 | Estado | Zustand (global) + TanStack Query (server state) |
-| HTTP | Axios + interceptors (JWT e erro) |
-| Rotas | React Router 7 + wrappers `ProtectedRoute` / `AdminRoute` / `GuestRoute` |
+| HTTP | Axios + interceptors (JWT e 401 global) |
+| Rotas | React Router 7 + `ProtectedRoute` / `GuestRoute` / `AdminRoute` |
 | Formulários | React Hook Form + Zod |
-| Testes | Vitest + Testing Library (unit) + Playwright (E2E) |
+| Toasts | Sonner |
+| Testes | Vitest + Testing Library (unit) |
 | Build | Vite |
 | Deploy previsto | Vercel / Netlify |
-| Repositório frontend | https://github.com/AlvesCosta08/loja-web *(a criar)* |
-| Última atualização frontend | Setup inicial |
+| Repositório frontend | https://github.com/AlvesCosta08/loja-web |
+| Última atualização frontend | **Fase 9 — Painel Admin (Dashboard, Pedidos, Produtos, Usuários)** |
 
 ### Autor
 
@@ -91,19 +90,21 @@ Atualizado ao final de cada fase concluída.
 
 **Roadmap completo: 16 de 16 fases concluídas.**
 
-- **147 testes** automatizados, todos verdes.
-- **15 classes de teste** + 1 config (`PrometheusTestConfig`).
+- **150 testes** automatizados, todos verdes.
+- **21 classes de teste** + 1 config (`PrometheusTestConfig`).
 - **~95 arquivos** de produção.
 - **9 migrations** Flyway (V1 a V9).
 - **Fundação do RAG completa e blindada por testes** (unidade + integração).
+- **Infra Dev** (CORS, `.env`, Docker Compose, `run-dev.sh`) operacional.
 
 ### Frontend
 
-**Roadmap: 0 de 11 fases concluídas.**
+**Roadmap: 9 de 11 fases concluídas.**
 
-Projeto a iniciar. Stack: React 19 + Vite + Tailwind CSS 4.
-
-✅ **CORS configurado no backend.** Bloqueio removido.
+- ✅ Fases 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9 (setup, guards, auth, catálogo, detalhe, carrinho, checkout, pagamento, histórico e painel admin).
+- 🔴 Fase 10 pendente (deploy).
+- **37 testes** verdes (Vitest + Testing Library).
+- **F5-safe payment** implementado (recupera o Pix após reload sem gerar duplicata).
 
 ---
 
@@ -124,17 +125,19 @@ Construir um e-commerce full-stack cobrindo:
 - Infraestrutura de desenvolvimento (Docker Compose, `.env`, script de automação)
 - **Fundação do RAG**: embedding, vetores, vector store, indexação por eventos, busca com threshold
 
-**Frontend** (a construir)
+**Frontend** (9/11 fases concluídas)
 
-- Autenticação com JWT (login, cadastro, guards de rota)
-- Vitrine de produtos com busca, filtros e paginação
-- Página de detalhe com add ao carrinho
-- Carrinho persistente com atualização de quantidade
-- Checkout completo (endereço, cupom, frete, pagamento)
-- Histórico de pedidos
-- Pagamento Pix (QR Code) e cartão
-- Painel admin (produtos, pedidos, usuários, dashboard)
-- Design responsivo (mobile-first)
+- ✅ Autenticação com JWT (login, cadastro, logout)
+- ✅ Vitrine de produtos com busca, filtros e paginação
+- ✅ Página de detalhe com add ao carrinho
+- ✅ Carrinho persistente com atualização de quantidade
+- ✅ Checkout completo (CEP, frete, criação de pedido)
+- ✅ Histórico de pedidos com status e detalhes
+- ✅ **Pagamento Pix (QR Code) e cartão**
+- ✅ **Painel admin (produtos, pedidos, usuários, dashboard)**
+- ✅ **F5-safe payment** (recupera Pix em andamento)
+- 🔴 Deploy
+- ✅ Design responsivo (mobile-first)
 
 ---
 
@@ -174,17 +177,19 @@ Construir um e-commerce full-stack cobrindo:
 
 | # | Fase | Status |
 |---|------|--------|
-| 0 | Setup Vite + React + Tailwind + **CORS no backend** + layout base | Pendente |
-| 1 | Roteamento + guards + interceptor JWT (Axios) | Pendente |
-| 2 | Autenticação (login, cadastro, `/users/me`) | Pendente |
-| 3 | Catálogo de produtos (lista, busca, filtros, paginação) | Pendente |
-| 4 | Detalhe do produto + adicionar ao carrinho | Pendente |
-| 5 | Carrinho (add, update, remove, total) | Pendente |
-| 6 | Checkout (endereço, cupom, frete, criação de pedido) | Pendente |
-| 7 | Pagamento (Pix com QR, cartão com Stripe) | Pendente |
-| 8 | Meus pedidos (lista + detalhe) | Pendente |
-| 9 | Painel admin (produtos, pedidos, usuários, dashboard) | Pendente |
-| 10 | Deploy + integração com backend em produção | Pendente |
+| 0 | Setup Vite + React + Tailwind + **CORS no backend** + layout base | ✅ Concluído |
+| 1 | Roteamento + guards + interceptor JWT (Axios) | ✅ Concluído |
+| 2 | Autenticação (login, cadastro, `/users/me`) | ✅ Concluído |
+| 3 | Catálogo de produtos (lista, busca, filtros, paginação) | ✅ Concluído |
+| 4 | Detalhe do produto + adicionar ao carrinho | ✅ Concluído |
+| 5 | Carrinho (add, update, remove, total) | ✅ Concluído |
+| 6 | Checkout (endereço, cupom, frete, criação de pedido) | ✅ Concluído |
+| 7 | Pagamento (Pix com QR, cartão com Stripe) | ✅ Concluído |
+| 8 | Meus pedidos (lista + detalhe) | ✅ Concluído |
+| 9 | Painel admin (produtos, pedidos, usuários, dashboard) | ✅ Concluído |
+| 10 | Deploy + integração com backend em produção | 🔴 Pendente |
+
+**Progresso:** 9/11 fases concluídas · 37 testes verdes.
 
 ---
 
@@ -357,8 +362,6 @@ Estrutura de pacotes em `com.alvescosta.loja`: `config`, `domain`, `dto`, `excep
 
 ### Fase 15 — Infraestrutura de Desenvolvimento
 
-**Endpoints afetados:** Nenhum endpoint novo, mas todos agora lidam com CORS.
-
 **Testes:** +3 (`CorsConfigTest`).
 
 **Implementação:**
@@ -422,31 +425,264 @@ Estrutura de pacotes em `com.alvescosta.loja`: `config`, `domain`, `dto`, `excep
 
 ## Fases concluídas — Frontend
 
-*(Nenhuma ainda. Primeira fase prevista: Setup Vite + React + Tailwind + layout base.)*
+### Fase 0 — Setup
+
+- Vite 6 + React 19 + TypeScript 5.6 + Tailwind CSS 4 (`@tailwindcss/vite`).
+- Estrutura **Feature-Sliced Design (FSD)**: `app/`, `shared/`, `features/`.
+- Alias `@/` configurado no `vite.config.ts` e `tsconfig.json`.
+- `Layout` (Header, Footer, Outlet) + `HomePage` (landing).
+- Providers globais: `QueryClientProvider` + `Toaster` (Sonner).
+- Lazy Loading de páginas com `Suspense` + `Spinner`.
+- **CORS no backend** já habilitado (Fase 15 do backend) — sem bloqueio.
 
 ---
 
-## Pré-requisitos para iniciar o frontend
+### Fase 1 — Roteamento + guards + interceptor JWT
 
-Antes da Fase 0 do frontend, é necessário:
-
-1. **Configurar CORS no backend.**
-   ✅ **Estado atual:** O `CorsConfig` existe e o `SecurityConfig` está configurado. O frontend já pode conectar.
-2. **Node.js** versão 20 LTS ou superior.
-3. **Nenhum CLI global necessário** — usar `npm create vite@latest`.
-4. **Estratégia de autenticação:** `localStorage` (simples) — decisão provisória, revisar antes do deploy.
+- Rotas com `createBrowserRouter` (React Router 7).
+- Guards: `ProtectedRoute`, `GuestRoute`, `AdminRoute`.
+- **Interceptor Axios:**
+  - Request: injeta `Authorization: Bearer <token>`.
+  - Response: trata `401` globalmente — limpa token + emite evento `auth:logout`.
+- Bootstrapper no `App.tsx`: valida token via `GET /users/me` no reload antes de renderizar rotas.
 
 ---
 
-## Estrutura prevista do projeto frontend
+### Fase 2 — Autenticação
 
-*(Mantido idêntico ao original)*
+- Telas de **Login** e **Cadastro** com React Hook Form + Zod.
+- `useAuthStore` (Zustand) — estado `user`, `token`, `isAuthenticated`, `isAdmin`.
+- Persistência do token em `localStorage`.
+- **Sessão persistente**: reload → `GET /users/me` revalida; inválido → redireciona para `/login`.
+- Logout limpa token + cache de queries do TanStack Query.
+
+---
+
+### Fase 3 — Catálogo de produtos
+
+- `ProductListPage` com paginação (`page`, `size`) e busca (`search`) **sincronizadas com a URL** (query params).
+- Filtro por categoria.
+- React Query (`useQuery`) com cache e `staleTime`.
+- Loading (Spinner) e error states.
+- Lazy loading das imagens dos produtos.
+
+---
+
+### Fase 4 — Detalhe do produto
+
+- `ProductDetailPage` com imagem, descrição, estoque e preço.
+- Botão **Adicionar ao carrinho** integrado à API.
+- Tratamento de erro quando fora de estoque.
+
+---
+
+### Fase 5 — Carrinho
+
+- Persistência **server-side** via `GET /cart`.
+- Página `CartPage`:
+  - Listagem de itens com imagem e subtotal.
+  - Atualização de quantidade (`PUT /cart/items/{id}`).
+  - Remoção individual (`DELETE /cart/items/{id}`).
+  - Total geral e contagem de itens.
+  - Botão para checkout.
+
+---
+
+### Fase 6 — Checkout
+
+- Página `CheckoutPage` com:
+  - Endereço (CEP obrigatório).
+  - **Cálculo de frete** via `POST /shipping/quote`.
+  - Criação do pedido (`POST /orders?cep=`) e **redirecionamento direto para `/orders/:id/pay`**.
+  - Cálculo do total com frete.
+
+---
+
+### Fase 7 — Pagamento (Pix + Cartão)
+
+- `features/payments/api/api.ts`: `createPixPayment`, `createCardPayment`, `getPayment`, `getLatestByOrder`.
+- `usePaymentPolling`: polling a cada 3s enquanto `PENDING`, para em `CONFIRMED`.
+- `PayOrderPage`:
+  - Tabs **Pix** e **Cartão**.
+  - Pix: QR Code (base64) + código copiável + polling.
+  - Cartão: processa gateway mockado e exibe `gatewayRef`.
+  - **F5-safe:** ao recarregar, `useQuery(getLatestByOrder)` reidrata o Pix sem criar duplicata.
+- `OrderDetailPage`: botão "Pagar agora" visível apenas quando `PENDING`.
+
+---
+
+### Fase 8 — Histórico de pedidos
+
+- Página `OrderListPage` com lista de pedidos do usuário (`GET /orders`).
+- Cada pedido exibe status, data, valor total e quantidade de itens.
+- Detalhe do pedido (`GET /orders/{id}`) com itens, snapshot de preços e status.
+- Acesso apenas para usuários autenticados (`ProtectedRoute`).
+
+---
+
+### Fase 9 — Painel Administrativo
+
+- `AdminRoute`: bloqueia `CUSTOMER`, libera `ADMIN`; redireciona não-logados para `/login`.
+- `AdminLayout`: sidebar com links (Dashboard, Pedidos, Produtos, Usuários) + `Outlet`.
+- **Dashboard** (`/admin`):
+  - Cards: pedidos totais, receita, ticket médio, pendentes, estoque baixo.
+  - Consome `GET /admin/dashboard`.
+- **Pedidos** (`/admin/orders`):
+  - Tabela com todos os pedidos (`GET /admin/orders`).
+  - Alteração de status via select (`PATCH /orders/{id}/status`).
+- **Produtos** (`/admin/products`):
+  - Tabela com destaque de estoque baixo (`GET /products`).
+  - Reposição de estoque (`POST /admin/products/{id}/restock`).
+- **Usuários** (`/admin/users`):
+  - Tabela com usuários do sistema (`GET /admin/users`).
+  - Alteração de role (`PATCH /admin/users/{id}/role`).
+
+---
+
+## Arquitetura (diagramas)
+
+### Fluxo de autenticação (JWT)
+
+```text
+Login (LoginPage)
+    │
+    ▼
+POST /auth/login ──► TokenResponse
+    │
+    ▼
+useAuthStore.setAuth() ──► localStorage.setItem('loja_token')
+    │
+    ▼
+Interceptor Axios ──► Authorization: Bearer <token>
+    │
+    ▼
+Reload da página ──► useAuthBootstrap
+    │
+    ▼
+GET /users/me ──► Revalida o token
+    │
+    ├── Válido ──► Mantém sessão
+    └── Inválido ──► clearAuth() → redireciona para /login
+```
+
+### Fluxo de uma compra (Frontend)
+
+```text
+Carrinho (CartPage)
+    │
+    ▼
+Checkout (CheckoutPage) ──► POST /orders (cria pedido)
+    │
+    ▼
+PayOrder (PayOrderPage) ──► POST /payments (gera Pix)
+    │                        │
+    │                        ▼
+    │                  QR Code + código copiável
+    │                        │
+    │                        ▼
+    │                  Polling (usePaymentPolling)
+    │                        │
+    │                        ▼
+    │                  GET /payments/{id} (a cada 3s)
+    │                        │
+    │                        ▼
+    │                  Status = CONFIRMED?
+    │                        │
+    │                        ▼
+    └──────────────────► OrderDetail (Pedido Pago)
+```
+
+### Fluxo de Cache (React Query)
+
+```text
+Adicionar ao Carrinho
+    │
+    ▼
+POST /cart/items ──► invalida cache ['cart']
+    │
+    ▼
+CartPage ──► GET /cart
+    │
+    ▼
+Checkout ──► POST /orders ──► invalida cache ['cart']
+    │
+    ▼
+PayOrder ──► POST /payments ──► polling até CONFIRMED
+    │
+    ▼
+invalida cache ['orders'] e ['order/{id}']
+```
+
+### Modelo de estados (Frontend)
+
+```text
+Zustand (client state)
+├── authStore
+│   ├── user, token, isAuthenticated, isAdmin
+│   └── setAuth, setUser, clearAuth
+└── (futuro) cartStore
+
+React Query (server state)
+├── ['cart']
+├── ['product', id]
+├── ['order', id]
+├── ['orders']
+├── ['payment', id]
+├── ['paymentByOrder', orderId]
+├── ['admin-dashboard']
+├── ['admin-orders']
+├── ['admin-products']
+└── ['admin-users']
+```
 
 ---
 
 ## Contrato da API (referência para o frontend)
 
-*(Mantido idêntico ao original. Quando o `AssistantController` for criado na fase seguinte, adicionar a seção `/assistant/*` aqui.)*
+### Endpoints consumidos pelo frontend
+
+| Método | Endpoint | Feature frontend | Status |
+|--------|----------|------------------|:------:|
+| POST | `/auth/register` | auth | ✅ |
+| POST | `/auth/login` | auth | ✅ |
+| GET | `/users/me` | auth | ✅ |
+| GET | `/products` | products | ✅ |
+| GET | `/products/{id}` | products | ✅ |
+| POST | `/cart/items` | cart | ✅ |
+| GET | `/cart` | cart | ✅ |
+| PUT | `/cart/items/{id}` | cart | ✅ |
+| DELETE | `/cart/items/{id}` | cart | ✅ |
+| DELETE | `/cart` | cart | ✅ |
+| POST | `/orders` | checkout | ✅ |
+| GET | `/orders` | orders | ✅ |
+| GET | `/orders/{id}` | orders | ✅ |
+| PATCH | `/orders/{id}/status` | admin | ✅ |
+| POST | `/shipping/quote` | shipping | ✅ |
+| GET | `/coupons/{code}` | checkout | ✅ |
+| POST | `/payments?orderId=` | payments | ✅ |
+| GET | `/payments/{id}` | payments | ✅ |
+| GET | `/payments?orderId=` | payments (F5-safe) | ✅ |
+| POST | `/payments/card?orderId=` | payments | ✅ |
+| GET | `/admin/dashboard` | admin | ✅ |
+| GET | `/admin/orders` | admin | ✅ |
+| GET | `/admin/users` | admin | ✅ |
+| PATCH | `/admin/users/{id}/role` | admin | ✅ |
+| GET | `/admin/products/low-stock` | admin | ✅ |
+| POST | `/admin/products/{id}/restock` | admin | ✅ |
+
+### Formatos principais
+
+**Erro (formato único):**
+```json
+{ "status": 400, "error": "Bad Request", "message": "..." }
+```
+
+**Token:**
+```json
+{ "access_token": "...", "token_type": "Bearer", "expires_in": 3600 }
+```
+
+**Carrinho, Pedido, Pagamento:** ver `README.md` do backend.
 
 ---
 
@@ -454,59 +690,107 @@ Antes da Fase 0 do frontend, é necessário:
 
 | Decisão | Por quê |
 |---------|---------|
-| ... | ... |
-| `MethodArgumentNotValidException` → mensagem concatenada `campo: erro` | Feedback único e legível |
-| **`.env` + `run-dev.sh`** | **Centraliza variáveis sem hardcode. O script injeta no shell antes do Maven rodar.** |
-| **Docker Compose com Healthcheck** | **Garante que o Spring Boot só suba após o Postgres estar aceitando conexões (`pg_isready`).** |
-| **Flyway Maven Plugin via `run-dev.sh`** | **Permite rodar `./run-dev.sh db info` e `./run-dev.sh db migrate` isoladamente.** |
-| **`FakeEmbeddingProvider` em `src/main`** | **Determinístico, sem custo de API, reutilizável em testes e dev** |
-| **`InMemoryVectorStore` como implementação padrão** | **Permite TDD rápido. `PgVectorStore` entra na fase final do RAG** |
-| **Eventos de domínio para indexação** | **Desacopla `ProductService` de `ProductIndexer`. Reaproveita o padrão do cache** |
-| **Um único `@EventListener` despachando por `active`** | **Evita o bug de dois listeners recebendo o mesmo evento e mutando o índice em sentidos opostos** |
-| **`threshold` no `VectorRetriever`** | **Descarta resultados com baixa similaridade, reduz ruído no contexto do LLM** |
+| **`BigDecimal`** para dinheiro | Evita erro de arredondamento de `double` |
+| **JWT stateless** | API escala horizontalmente sem sessão |
+| **Flyway** em produção, **H2 create-drop** em testes | Schema real auditável + testes rápidos |
+| **Snapshot de preços** em `OrderItem` | Se o produto mudar, o pedido mantém o valor histórico |
+| **`@OnDelete(CASCADE)`** explícito | FKs consistentes entre H2 e PostgreSQL |
+| **`record`** para DTOs | Imutabilidade e menos boilerplate |
+| **`@EnableMethodSecurity`** | Sem isso, `@PreAuthorize` é ignorado silenciosamente |
+| **`username = user.getId()`** no `UserDetailsServiceImpl` | O subject do JWT é o ID do usuário |
+| **`total = subtotal − discount + shippingCost`** | Fórmula canônica em `OrderService` |
+| **Cache Redis com TTL 5 min** | Reduz carga em consultas repetidas do catálogo |
+| **Dois caches separados** (`products`, `productLists`) | Invalidação cirúrgica sem derrubar listas |
+| **`PrometheusMetricsConfig` explícito** | Contorna bug de auto-config do Spring Boot 3.4 |
+| **Stripe mockado** (`StripePaymentGateway`) | Testa o fluxo sem depender do SDK externo |
+| **Coluna `discount_value`** (não `value`) | `value` é palavra reservada em SQL |
+| **`RestAuthenticationEntryPoint`** | Retorna 401 em vez de 403 default do Spring |
+| **`GET /payments?orderId`** | F5-safe — frontend recupera o Pix sem duplicata |
+| **`.env` + `run-dev.sh`** | Centraliza variáveis sem hardcode |
+| **Docker Compose com Healthcheck** | Spring só sobe após Postgres aceitar conexão |
+| **`FakeEmbeddingProvider` em `src/main`** | Determinístico, reutilizável |
+| **`InMemoryVectorStore` como padrão** | Permite TDD rápido; pgvector depois |
+| **Eventos de domínio para indexação** | Desacopla `ProductService` de `ProductIndexer` |
+| **Um único `@EventListener` despachando por `active`** | Evita bug de dois listeners mutando o índice em sentidos opostos |
+| **`threshold` no `VectorRetriever`** | Descarta resultados com baixa similaridade |
 
 ---
 
 ## Decisões técnicas — Frontend
 
-*(A confirmar durante a Fase 0)*
-
-Decisões provisórias: *(Mantidas idênticas ao original)*
+| Decisão | Por quê |
+|---------|---------|
+| **Feature-Sliced Design (FSD)** | Evita acoplamento, escala por domínio de negócio |
+| **React 19 + Vite 6** | Fast refresh, build rápido |
+| **Tailwind CSS 4** via plugin Vite | Zero-config, tokens via `@theme` |
+| **TanStack Query** para server state | Cache, retry, invalidação declarativa |
+| **Zustand** para client state | Store de auth e carrinho — simples, sem `Provider` |
+| **Axios + interceptors** | Injeção automática de Bearer + tratamento global de 401 |
+| **`ProtectedRoute` / `GuestRoute` / `AdminRoute`** | Guards declarativos por role/sessão |
+| **Sincronização de busca/paginação na URL** | Compartilhável, back/forward funcionam |
+| **Bootstrapper no `App.tsx`** | Valida token via `/users/me` antes de renderizar |
+| **React Hook Form + Zod** | Validação schema-first, alinhada com Bean Validation |
+| **Sonner** para toasts | Acessível, empilhável, sem CSS extra |
+| **Lazy Loading + Suspense** | Reduz bundle inicial |
+| **F5-safe payments** (`GET /payments?orderId=`) | Recupera o QR Pix sem gerar duplicata |
+| **Polling com `usePaymentPolling`** | Atualiza o status do pagamento a cada 3s até CONFIRMED |
+| **`localStorage` para JWT** *(provisório)* | Simples — **revisar antes de produção** (XSS) |
+| **Vitest + Testing Library** | Mesma API do Jest, integração nativa com Vite |
+| **`@/` alias** | Imports limpos, refatoração sem caminhos relativos |
+| **Evento `auth:logout` global** | Desacopla o interceptor Axios da store de auth |
 
 ---
 
-## Pontos de atenção herdados do backend
+## Pontos de atenção
 
-1-14. *(Mantidos idênticos ao original)*
-15. ✅ **CORS configurado** — `http://localhost:5173` permitido.
-16-20. *(Mantidos idênticos ao original)*
-21. **Testes de CORS com MockMvc dão falso positivo.** `@AutoConfigureMockMvc` não reproduz o preflight real do Tomcat. Sempre valide CORS com `curl` contra a app rodando.
-22. **`@EventListener` múltiplos no mesmo tipo de evento são perigosos.** Todos os métodos são chamados para todos os eventos. Prefira **um único listener** que despacha por estado/campo. Sempre cubra com teste de integração (`ApplicationEventPublisher` real), não só unitário.
+### Backend
+
+1. **`GlobalExceptionHandler`** não cobre 403, 405, 409, 500. Erros 403/500 usam formato default do Spring.
+2. **Stripe é mock.** Para produção, adicionar `com.stripe:stripe-java` + configurar `stripe.api-key` e `stripe.webhook-secret`.
+3. **`JWT_EXPIRATION_MS`** hardcoded em `application.yml` (não lê env var).
+4. **`PgVectorStore`** ainda não existe — só `InMemoryVectorStore`. Necessário migration V10 com pgvector.
+5. **Testes de CORS com MockMvc dão falso positivo.** Valide sempre com `curl` + app rodando.
+6. **`@EventListener` múltiplos no mesmo tipo de evento são perigosos.** Prefira um único listener que despacha por estado/campo.
+
+### Frontend
+
+1. **`localStorage` para JWT** — vulnerável a XSS. Migrar para `httpOnly cookies` + CSRF antes de prod.
+2. **`AdminProducts` usa `productApi.list`** (público). Ideal: endpoint `GET /admin/products` paginado no backend.
+3. **Sem cobertura E2E** (Playwright) — apenas unit/integration com Vitest.
+4. **Sem Sentry / observabilidade.**
+5. **Deploy ainda não configurado** (Vercel/Netlify + CORS prod no backend).
 
 ---
 
-## Bugs encontrados e correções — Backend
+## Bugs encontrados e correções
+
+### Backend
 
 | # | Bug | Correção |
 |---|-----|----------|
-| 1 | `@PreAuthorize` ignorado silenciosamente | Habilitar `@EnableMethodSecurity` no `SecurityConfig` |
-| 2 | 403 em vez de 401 para token ausente | Criar `RestAuthenticationEntryPoint` customizado |
-| 3 | Coluna `value` reservada em SQL (tabela `coupons`) | Renomear para `discount_value` |
-| 4 | FKs inconsistentes entre H2 e PostgreSQL | Usar `@OnDelete(CASCADE)` explícito |
-| 5 | `MeterRegistry` injetado cedo quebrava auto-config do Spring Boot 3.4 | Criar `PrometheusMetricsConfig` explícito |
-| 6 | Warnings do Mockito/ByteBuddy no JDK 21 | Adicionar `-XX:+EnableDynamicAgentLoading` no Surefire `argLine` |
-| 7 | Nomes de parâmetros perdidos em runtime | Ativar `<parameters>true</parameters>` no compilador Maven |
+| 1 | `@PreAuthorize` ignorado silenciosamente | `@EnableMethodSecurity` no `SecurityConfig` |
+| 2 | 403 em vez de 401 para token ausente | `RestAuthenticationEntryPoint` customizado |
+| 3 | Coluna `value` reservada em SQL | Renomear para `discount_value` |
+| 4 | FKs inconsistentes entre H2 e PostgreSQL | `@OnDelete(CASCADE)` explícito |
+| 5 | `MeterRegistry` injetado cedo quebrava auto-config | `PrometheusMetricsConfig` explícito |
+| 6 | Warnings do Mockito/ByteBuddy no JDK 21 | `-XX:+EnableDynamicAgentLoading` no Surefire |
+| 7 | Nomes de parâmetros perdidos em runtime | `<parameters>true</parameters>` no Maven |
 | 8 | Cache servia dados obsoletos após update | `@CacheEvict` em `create`/`update`/`delete` |
-| 9 | `CorsConfigTest` passava mesmo sem CORS em produção | Falso positivo do `MockMvc`. Validação real via `curl` + criação do `CorsConfig` |
-| 10 | **`ProductIndexer` com `@Component` sem beans de dependência** quebrava o contexto de todos os `@SpringBootTest` | Criar `AssistantConfig` registrando `EmbeddingProvider` e `VectorStore` como beans |
-| 11 | **`ProductIndexer` com dois `@EventListener`** apagava produtos recém-criados do índice (bug crítico de RAG) | Consolidar em um único `onProductEvent()` que despacha por `active`. Coberto por teste de integração |
-| 12 | `.class` corrompido pelo editor quebrava `@InjectMocks` (Flexible Constructor Bodies) | Sempre rodar `mvn clean test` após alterar `ProductService`. Documentado para futuras sessões |
+| 9 | `CorsConfigTest` dava falso positivo | Validar via `curl` + `CorsConfig` real |
+| 10 | `ProductIndexer` sem beans de dependência quebrava `@SpringBootTest` | `AssistantConfig` registrando `EmbeddingProvider` e `VectorStore` |
+| 11 | `ProductIndexer` com dois `@EventListener` apagava produtos recém-criados | Um único `onProductEvent()` despachando por `active` |
 
----
+### Frontend
 
-## Bugs encontrados e correções — Frontend
-
-*(Nenhum ainda — projeto a iniciar.)*
+| # | Sintoma | Correção |
+|---|---------|----------|
+| 1 | Token `USER` no mock da store (backend manda `CUSTOMER`) | Trocar para `'CUSTOMER'` |
+| 2 | `productApi.getById(id as string)` — erro de tipo | `getById(Number(id))` |
+| 3 | `ShippingQuoteResponse` tipado como array | Envelopar em `{ options: [...] }` |
+| 4 | `waitFor` importado mas não usado | Remover dos imports nos testes |
+| 5 | Ambiguidade de `aria-label` no `AdminProducts` | Diferenciar `repor quantidade` (input) e `repor estoque` (botão) |
+| 6 | Botão "Repor" desabilitado antes do React processar o input | `waitFor(() => expect(button).toBeEnabled())` no teste |
+| 7 | Teste de polling com fake timers travando | Usar `vi.waitFor` (nativo do Vitest) em vez do `waitFor` do Testing Library |
 
 ---
 
@@ -515,19 +799,121 @@ Decisões provisórias: *(Mantidas idênticas ao original)*
 ### Pré-requisitos
 
 - JDK 21
-- Docker + Docker Compose (para Postgres e Redis)
-- Maven Wrapper (incluído no projeto)
+- Docker + Docker Compose
+- Maven Wrapper (incluído)
 
-### Passos (Desenvolvimento)
+### Passos
 
 ```bash
-# 1. Clonar
 git clone https://github.com/AlvesCosta08/loja-api.git
 cd loja-api
-
-# 2. Criar variáveis de ambiente
 cp .env.example .env
-# Edite .env se necessário (as senhas padrão são 'postgres')
-
-# 3. Rodar a aplicação
 ./run-dev.sh
+```
+
+A API sobe em **http://localhost:8080**.
+
+### Subcomandos do `run-dev.sh`
+
+```bash
+./run-dev.sh up        # sobe docker + app
+./run-dev.sh down      # derruba serviços
+./run-dev.sh reset     # limpa banco e sobe de novo
+./run-dev.sh db info   # flyway info
+./run-dev.sh db migrate
+./run-dev.sh mvn test  # roda os testes
+```
+
+### Testes
+
+```bash
+./mvnw clean test      # 150 testes
+```
+
+---
+
+## Como executar — Frontend
+
+### Pré-requisitos
+
+- Node.js 20 LTS+
+- Backend rodando em `http://localhost:8080`
+
+### Passos
+
+```bash
+git clone https://github.com/AlvesCosta08/loja-web.git
+cd loja-web
+npm install
+cp .env.example .env
+# VITE_API_URL=http://localhost:8080
+npm run dev
+```
+
+Acesse **http://localhost:5173**.
+
+### Testes e build
+
+```bash
+npx vitest run         # 37 testes
+npm run build          # gera dist/
+```
+
+---
+
+## Próximos passos
+
+### Fase 10 — Deploy (a única pendente)
+
+- **Frontend:** Vercel ou Netlify. Configurar `vercel.json`/`netlify.toml` com SPA fallback + `VITE_API_URL` de produção.
+- **Backend:** Render ou Railway. Subir `Dockerfile`, provisionar PostgreSQL + Redis, configurar variáveis de ambiente.
+- **CORS prod:** Ajustar `CorsConfig` no backend para o domínio do frontend.
+- **Validação:** `curl` de preflight (`OPTIONS`) para confirmar que o navegador não vai bloquear.
+
+### Backend (fases futuras)
+
+1. `PgVectorStore` + migration V10 (pgvector).
+2. `AssistantService` (retriever + LLM).
+3. `AssistantController` (`POST /assistant/chat`).
+4. Servidor MCP com tools (search, cart, order, payment).
+5. Fine-tuning (classificador de intenção).
+
+---
+
+## Possíveis extensões futuras
+
+### Frontend
+
+- Migrar auth para `httpOnly cookies` + CSRF (antes de prod).
+- E2E com Playwright cobrindo checkout completo.
+- PWA (offline-first para catálogo).
+- Storybook para a camada `shared/components/ui`.
+- Sentry para observabilidade.
+
+### Backend
+
+- Stripe real.
+- pgvector em produção.
+- Observabilidade: dashboards Grafana pré-configurados.
+- Handlers completos no `GlobalExceptionHandler` (403, 405, 409, 500).
+
+### IA
+
+- AssistantService público (chat de suporte).
+- Servidor MCP consumível por agentes externos.
+- Fine-tuning de classificador de intenção.
+
+---
+
+## Como atualizar este documento
+
+Ao final de cada fase:
+
+1. **Atualize as tabelas de roadmap** (backend/frontend) com o status real.
+2. **Adicione uma subseção em "Fases concluídas"** com: endpoints, testes (+N), implementação, decisões.
+3. **Registre bugs** encontrados na seção correspondente, com sintoma + correção.
+4. **Atualize "Status geral"** com contagem de testes e migrations.
+5. **Atualize "Última atualização"** nas Info Gerais.
+6. **Commit** com `docs(resumo): atualiza contexto após fase X`.
+
+> ⚠️ **Regra de ouro:** nunca marcar fase como concluída sem `npm run test:run` (frontend) ou `mvn clean test` (backend) verdes.

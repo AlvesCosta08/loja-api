@@ -42,6 +42,22 @@ public class PaymentController {
                 id, currentUserId(principal), isAdmin(principal));
     }
 
+    /**
+     * Busca o pagamento mais recente do pedido. Endpoint F5-safe:
+     * o frontend chama isso ao montar a tela de pagamento para reidratar
+     * o QR Code / Pix copia-e-cola após reload, sem precisar criar
+     * um novo pagamento.
+     *
+     * Retorna 404 quando o pedido não tem nenhum pagamento ainda.
+     */
+    @GetMapping
+    public PaymentResponse findByOrder(
+            @AuthenticationPrincipal UserDetails principal,
+            @RequestParam Long orderId) {
+        return paymentService.findLatestByOrder(
+                orderId, currentUserId(principal), isAdmin(principal));
+    }
+
     @PostMapping("/{id}/confirm")
     @PreAuthorize("hasRole('ADMIN')")
     public PaymentResponse confirm(@PathVariable Long id) {
