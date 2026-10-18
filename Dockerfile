@@ -25,9 +25,7 @@ RUN mvn -B -Dmaven.wagon.http.retryHandler.count=5 \
            -Dmaven.wagon.http.retryHandler.requestSentEnabled=true \
            clean package -DskipTests
 
-# ============================================
-# ESTÁGIO 2 — RUNTIME
-# ============================================
+
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
