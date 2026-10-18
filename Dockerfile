@@ -4,13 +4,21 @@ WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 RUN chmod +x mvnw \
- && ./mvnw -B -DskipTests dependency:go-offline
+ && ./mvnw -B dependency:go-offline
 
 COPY src ./src
+# Os testes rodam no CI (GitHub Actions), onde há Docker para o Testcontainers.
 RUN ./mvnw -B -DskipTests clean package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+
+RUN groupadd --system app \
+ && useradd --system --gid app --no-create-home app
+
+COPY --from=build --chown=app:app /app/target/*.jar app.jar
+USER app
+
+# A porta real vem da variável PORT (o Render define 10000)
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-jar", "app.jar"]
