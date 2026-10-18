@@ -21,8 +21,8 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
+  # 👇 AQUI: removida a linha `type: ${CACHE_TYPE:redis}`
   cache:
-    type: ${CACHE_TYPE:redis}
     redis:
       time-to-live: 5m
       cache-null-values: false
