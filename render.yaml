@@ -61,14 +61,14 @@ services:
           name: loja-redis
           property: password
       - key: REDIS_SSL
-        value: "true"
+        value: "false"                # ← CORRIGIDO (Redis interno Render = sem TLS)
       - key: JWT_SECRET
-        generateValue: true
+        generateValue: true           # ou sync: false + defina no painel
       - key: JWT_EXPIRATION_MS
         value: "3600000"
-      - key: SERVER_PORT
-        value: "8080"
+      # - key: SERVER_PORT             # ← REMOVIDO (Render injeta PORT)
+      #   value: "8080"
       - key: CORS_ALLOWED_ORIGINS
         value: https://loja-web.onrender.com
-      - key: SPRING_PROFILES_ACTIVE
-        value: prod
+      # - key: SPRING_PROFILES_ACTIVE  # ← REMOVIDO (sem application-prod.yml)
+      #   value: prod
