@@ -32,11 +32,6 @@ public class SecurityConfig {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    /**
-     * Falha o boot se o JWT_SECRET default estiver sendo usado em produção.
-     * Detecta produção por: env RENDER=true (Render injeta) OU
-     * SPRING_PROFILES_ACTIVE=prod/production.
-     */
     @PostConstruct
     void validateJwtSecret() {
         if (DEFAULT_JWT_SECRET.equals(jwtSecret)) {
@@ -63,6 +58,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/health").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/coupons/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/shipping/quote").permitAll()

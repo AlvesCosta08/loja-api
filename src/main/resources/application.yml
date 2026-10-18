@@ -1,10 +1,12 @@
 spring:
   application:
     name: loja-api
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:loja}?sslmode=${DB_SSLMODE:disable}
     username: ${DB_USER:postgres}
     password: ${DB_PASS:postgres}
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -12,16 +14,19 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 0
+
   cache:
     type: redis
     redis:
       time-to-live: 5m
       cache-null-values: false
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -31,6 +36,13 @@ spring:
         enabled: ${REDIS_SSL:false}
       timeout: 3000ms
       connect-timeout: 3000ms
+
+  # 👇 NOVA CONFIGURAÇÃO: Upload de imagens
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 jwt:
   secret: ${JWT_SECRET:change-me-in-production-with-at-least-32-chars}
