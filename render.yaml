@@ -1,70 +1,39 @@
-databases:
-  - name: loja-postgres
-    plan: free
-    region: oregon
-    databaseName: loja
-    user: loja
-    postgresMajorVersion: "16"
-
 services:
-  - type: keyvalue
-    name: loja-redis
-    plan: free
-    region: oregon
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
-
   - type: web
     name: loja-api
     runtime: docker
-    plan: free
-    region: oregon
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /actuator/health/liveness
-    autoDeploy: true
+    repo: https://github.com/AlvesCosta08/loja-api
+    branch: main
+    plan: starter # Ou 'free' se disponível, mas 'starter' é mais estável para Java
+    healthCheckPath: /actuator/health
     envVars:
-      - key: SPRING_PROFILES_ACTIVE
-        value: prod
       - key: JAVA_TOOL_OPTIONS
-        value: "-XX:MaxRAMPercentage=70"
-
-      # PostgreSQL
-      - key: DB_HOST
+        value: "-XX:MaxRAMPercentage=75.0 -XX:+UseSerialGC" # Otimiza a JVM para containers com pouca RAM
+      - key: JWT_SECRET
+        generateValue: true # O Render gerará um segredo aleatório seguro para você
+      - key: JWT_EXPIRATION_MS
+        value: "3600000"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://loja-web.vercel.app" # Substitua pela URL real do seu frontend
+      - key: DATABASE_URL
         fromDatabase:
-          name: loja-postgres
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: loja-postgres
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: loja-postgres
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: loja-postgres
-          property: user
-      - key: DB_PASS
-        fromDatabase:
-          name: loja-postgres
-          property: password
-      - key: DB_SSLMODE
-        value: require
-
-      # Redis (uma única URL)
+          name: loja-db
+          property: connectionString
       - key: REDIS_URL
         fromService:
-          type: keyvalue
+          type: redis
           name: loja-redis
           property: connectionString
 
-      # JWT
-      - key: JWT_SECRET
-        generateValue: true
-      - key: JWT_EXPIRATION_MS
-        value: "3600000"
+databases:
+  - name: loja-db
+    databaseName: loja
+    user: loja_user
+    plan: starter # PostgreSQL 16
 
-      # CORS
-      - key: CORS_ALLOWED_ORIGINS
-        value: https://loja-web.onrender.com
+# O Redis é opcional. Se quiser usar, descomente as linhas abaixo.
+# Se não quiser, remova a referência ao REDIS_URL acima e defina SPRING_CACHE_TYPE=simple nas env vars.
+# redis:
+#   - name: loja-redis
+#     plan: starter
+#     maxmemoryPolicy: noeviction
