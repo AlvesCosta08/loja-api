@@ -14,7 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -54,21 +53,23 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("400 ao tentar registrar e-mail duplicado")
+    @DisplayName("409 ao tentar registrar e-mail duplicado (Conflict)")
     void naoDeveRegistrarEmailDuplicado() throws Exception {
         UserCreateRequest req =
                 new UserCreateRequest("alves@test.com", "Alves Costa", "senha12345");
 
+        // Primeiro cadastro (sucesso)
         mockMvc.perform(post("/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)));
 
+        // Segundo cadastro com mesmo e-mail (deve retornar 409 Conflict)
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message",
-                        containsStringIgnoringCase("email")));
+                .andExpect(status().isConflict()) // <-- CORRIGIDO: de isBadRequest() para isConflict()
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("E-mail já cadastrado: alves@test.com"));
     }
 
     @Test

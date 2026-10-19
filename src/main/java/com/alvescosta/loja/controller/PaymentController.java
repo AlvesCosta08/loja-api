@@ -5,8 +5,8 @@ import com.alvescosta.loja.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,43 +19,39 @@ public class PaymentController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PaymentResponse createPix(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication,
             @RequestParam Long orderId) {
         return paymentService.createPix(
-                orderId, currentUserId(principal), isAdmin(principal));
+                orderId, currentUserId(userId), isAdmin(authentication));
     }
 
     @PostMapping("/card")
     @ResponseStatus(HttpStatus.CREATED)
     public PaymentResponse createCard(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication,
             @RequestParam Long orderId) {
         return paymentService.createCard(
-                orderId, currentUserId(principal), isAdmin(principal));
+                orderId, currentUserId(userId), isAdmin(authentication));
     }
 
     @GetMapping("/{id}")
     public PaymentResponse findById(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication,
             @PathVariable Long id) {
         return paymentService.findByIdForUser(
-                id, currentUserId(principal), isAdmin(principal));
+                id, currentUserId(userId), isAdmin(authentication));
     }
 
-    /**
-     * Busca o pagamento mais recente do pedido. Endpoint F5-safe:
-     * o frontend chama isso ao montar a tela de pagamento para reidratar
-     * o QR Code / Pix copia-e-cola após reload, sem precisar criar
-     * um novo pagamento.
-     *
-     * Retorna 404 quando o pedido não tem nenhum pagamento ainda.
-     */
     @GetMapping
     public PaymentResponse findByOrder(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication,
             @RequestParam Long orderId) {
         return paymentService.findLatestByOrder(
-                orderId, currentUserId(principal), isAdmin(principal));
+                orderId, currentUserId(userId), isAdmin(authentication));
     }
 
     @PostMapping("/{id}/confirm")
@@ -64,12 +60,12 @@ public class PaymentController {
         return paymentService.confirm(id);
     }
 
-    private Long currentUserId(UserDetails principal) {
-        return Long.parseLong(principal.getUsername());
+    private Long currentUserId(String userId) {
+        return Long.parseLong(userId);
     }
 
-    private boolean isAdmin(UserDetails principal) {
-        return principal.getAuthorities().stream()
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

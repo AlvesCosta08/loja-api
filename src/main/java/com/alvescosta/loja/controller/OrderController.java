@@ -10,8 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,25 +24,26 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse checkout(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
             @RequestParam(required = false) String couponCode,
             @RequestParam(required = false) String cep) {
-        return orderService.checkout(currentUserId(principal), couponCode, cep);
+        return orderService.checkout(currentUserId(userId), couponCode, cep);
     }
 
     @GetMapping
     public Page<OrderResponse> listMine(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
             @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
-        return orderService.listMine(currentUserId(principal), pageable);
+        return orderService.listMine(currentUserId(userId), pageable);
     }
 
     @GetMapping("/{id}")
     public OrderResponse findById(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
+            Authentication authentication,
             @PathVariable Long id) {
-        boolean isAdmin = isAdmin(principal);
-        return orderService.findByIdForUser(id, currentUserId(principal), isAdmin);
+        boolean isAdmin = isAdmin(authentication);
+        return orderService.findByIdForUser(id, currentUserId(userId), isAdmin);
     }
 
     @PatchMapping("/{id}/status")
@@ -52,12 +53,12 @@ public class OrderController {
         return orderService.updateStatus(id, request.status());
     }
 
-    private Long currentUserId(UserDetails principal) {
-        return Long.parseLong(principal.getUsername());
+    private Long currentUserId(String userId) {
+        return Long.parseLong(userId);
     }
 
-    private boolean isAdmin(UserDetails principal) {
-        return principal.getAuthorities().stream()
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

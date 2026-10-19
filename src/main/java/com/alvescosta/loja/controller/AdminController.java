@@ -9,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,10 +39,10 @@ public class AdminController {
 
     @PatchMapping("/users/{id}/role")
     public UserResponse updateRole(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long id,
             @Valid @RequestBody UpdateRoleRequest request) {
-        return adminService.updateUserRole(id, currentUserId(principal), request.role());
+        return adminService.updateUserRole(id, currentUserId(userId), request.role());
     }
 
     @GetMapping("/products/low-stock")
@@ -59,7 +58,7 @@ public class AdminController {
         return adminService.restock(id, request.quantity());
     }
 
-    private Long currentUserId(UserDetails principal) {
-        return Long.parseLong(principal.getUsername());
+    private Long currentUserId(String userId) {
+        return Long.parseLong(userId);
     }
 }

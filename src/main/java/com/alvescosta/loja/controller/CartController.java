@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,39 +20,40 @@ public class CartController {
     @PostMapping("/items")
     @ResponseStatus(HttpStatus.CREATED)
     public CartResponse addItem(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody AddToCartRequest request) {
-        return cartService.addItem(currentUserId(principal), request);
+        return cartService.addItem(currentUserId(userId), request);
     }
 
     @GetMapping
-    public CartResponse getCart(@AuthenticationPrincipal UserDetails principal) {
-        return cartService.getCart(currentUserId(principal));
+    public CartResponse getCart(@AuthenticationPrincipal String userId) {
+        return cartService.getCart(currentUserId(userId));
     }
 
     @PutMapping("/items/{id}")
     public CartResponse updateQuantity(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long id,
             @Valid @RequestBody UpdateCartItemRequest request) {
-        return cartService.updateQuantity(currentUserId(principal), id, request.quantity());
+        return cartService.updateQuantity(currentUserId(userId), id, request.quantity());
     }
 
     @DeleteMapping("/items/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeItem(
-            @AuthenticationPrincipal UserDetails principal,
+            @AuthenticationPrincipal String userId,
             @PathVariable Long id) {
-        cartService.removeItem(currentUserId(principal), id);
+        cartService.removeItem(currentUserId(userId), id);
     }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void clearCart(@AuthenticationPrincipal UserDetails principal) {
-        cartService.clearCart(currentUserId(principal));
+    public void clearCart(@AuthenticationPrincipal String userId) {
+        cartService.clearCart(currentUserId(userId));
     }
 
-    private Long currentUserId(UserDetails principal) {
-        return Long.parseLong(principal.getUsername());
+    // Método auxiliar limpo e seguro
+    private Long currentUserId(String userId) {
+        return Long.parseLong(userId);
     }
 }

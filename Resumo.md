@@ -38,7 +38,7 @@ Atualizado ao final de cada fase concluída.
 | Descrição | API REST de e-commerce com autenticação, catálogo, carrinho, pedidos, cupons, frete, pagamentos Pix/cartão, admin, métricas e fundação de IA (RAG com TDD) |
 | Linguagem | Java 21 |
 | Framework | Spring Boot 3.4.0 |
-| Versão atual | **0.15.0-SNAPSHOT** |
+| Versão atual | **0.16.0-SNAPSHOT** |
 | Abordagem | TDD estrito (Red → Green → Refactor) |
 | Autenticação | JWT HS256 (JJWT 0.12.6) |
 | Banco — produção | PostgreSQL 16 |
@@ -51,7 +51,7 @@ Atualizado ao final de cada fase concluída.
 | Boilerplate | Lombok 1.18.36 |
 | Pacote base | `com.alvescosta.loja` |
 | Repositório backend | https://github.com/AlvesCosta08/loja-api |
-| Última atualização backend | **Fase 16 — Fundação do RAG (7 ciclos TDD)** |
+| Última atualização backend | **Fase 17 — Robustez de Tratamento de Exceções e Segurança** |
 
 ### Frontend
 
@@ -88,13 +88,14 @@ Atualizado ao final de cada fase concluída.
 
 ### Backend
 
-**Roadmap completo: 16 de 16 fases concluídas.**
+**Roadmap completo: 17 de 17 fases concluídas.**
 
-- **150 testes** automatizados, todos verdes.
-- **21 classes de teste** + 1 config (`PrometheusTestConfig`).
+- **163 testes** automatizados, todos verdes.
+- **22 classes de teste** + 1 config (`PrometheusTestConfig`).
 - **~95 arquivos** de produção.
 - **9 migrations** Flyway (V1 a V9).
 - **Fundação do RAG completa e blindada por testes** (unidade + integração).
+- **Tratamento de exceções global padronizado** (400, 401, 403, 404, 405, 409, 500).
 - **Infra Dev** (CORS, `.env`, Docker Compose, `run-dev.sh`) operacional.
 
 ### Frontend
@@ -124,6 +125,7 @@ Construir um e-commerce full-stack cobrindo:
 - Dashboard de métricas (Micrometer + Prometheus)
 - Infraestrutura de desenvolvimento (Docker Compose, `.env`, script de automação)
 - **Fundação do RAG**: embedding, vetores, vector store, indexação por eventos, busca com threshold
+- **Robustez**: Tratamento de erros padronizado e injeção de segurança otimizada
 
 **Frontend** (9/11 fases concluídas)
 
@@ -162,6 +164,7 @@ Construir um e-commerce full-stack cobrindo:
 | 14 | Dashboard de métricas | ✅ Concluído |
 | 15 | Infra Dev: CORS, Env Vars, Docker, Flyway Script | ✅ Concluído |
 | 16 | Fundação do RAG (7 ciclos TDD) | ✅ Concluído |
+| 17 | Robustez de Exceções e Segurança (GlobalExceptionHandler + Auth) | ✅ Concluído |
 
 ### Roadmap de IA (visão macro)
 
@@ -423,6 +426,25 @@ Estrutura de pacotes em `com.alvescosta.loja`: `config`, `domain`, `dto`, `excep
 
 ---
 
+### Fase 17 — Robustez de Tratamento de Exceções e Segurança
+
+**Testes:** +13 (de 150 para 163, incluindo `GlobalExceptionHandlerTest`).
+
+**Implementação:**
+- **`GlobalExceptionHandler` Blindado:** Padronização de respostas JSON para todos os cenários de erro:
+  - `400 Bad Request`: `BusinessException`, `MethodArgumentNotValidException`, `HttpMessageNotReadableException`, `MethodArgumentTypeMismatchException`, `MissingServletRequestParameterException`.
+  - `401 Unauthorized`: `UnauthorizedException`.
+  - `403 Forbidden`: `AccessDeniedException`.
+  - `404 Not Found`: `NotFoundException`, `EntityNotFoundException`.
+  - `405 Method Not Allowed`: `HttpRequestMethodNotSupportedException`.
+  - `409 Conflict`: `DuplicateEmailException`, `DataIntegrityViolationException`.
+  - `500 Internal Server Error`: `Exception` (genérica, com log seguro e mensagem genérica para o cliente).
+- **`DuplicateEmailException`:** Nova exceção dedicada para retornar `409 Conflict` quando um e-mail já existe, substituindo o antigo `400 Bad Request`.
+- **Otimização de Segurança:** Substituição de `@AuthenticationPrincipal UserDetails` por `@AuthenticationPrincipal String userId` em todos os controllers (`User`, `Cart`, `Order`, `Payment`, `Admin`). Isso elimina `NullPointerException` e alinha perfeitamente com o `JwtAuthFilter`, que injeta o ID como `String` no subject do token.
+- **Correção de Testes:** Adicionado `management.health.redis.enabled: false` no `application-test.yml` para evitar falhas de `503 Service Unavailable` nos testes de métricas, já que o ambiente de teste usa cache `simple`.
+
+---
+
 ## Fases concluídas — Frontend
 
 ### Fase 0 — Setup
@@ -563,12 +585,8 @@ GET /users/me ──► Revalida o token
     │
     ├── Válido ──► Mantém sessão
     └── Inválido ──► clearAuth() → redireciona para /login
-```
 
-### Fluxo de uma compra (Frontend)
-
-```text
-Carrinho (CartPage)
+    Carrinho (CartPage)
     │
     ▼
 Checkout (CheckoutPage) ──► POST /orders (cria pedido)
@@ -590,12 +608,9 @@ PayOrder (PayOrderPage) ──► POST /payments (gera Pix)
     │                        │
     │                        ▼
     └──────────────────► OrderDetail (Pedido Pago)
-```
 
-### Fluxo de Cache (React Query)
 
-```text
-Adicionar ao Carrinho
+    Adicionar ao Carrinho
     │
     ▼
 POST /cart/items ──► invalida cache ['cart']
@@ -611,11 +626,7 @@ PayOrder ──► POST /payments ──► polling até CONFIRMED
     │
     ▼
 invalida cache ['orders'] e ['order/{id}']
-```
 
-### Modelo de estados (Frontend)
-
-```text
 Zustand (client state)
 ├── authStore
 │   ├── user, token, isAuthenticated, isAdmin
@@ -633,287 +644,54 @@ React Query (server state)
 ├── ['admin-orders']
 ├── ['admin-products']
 └── ['admin-users']
-```
 
----
 
-## Contrato da API (referência para o frontend)
-
-### Endpoints consumidos pelo frontend
-
-| Método | Endpoint | Feature frontend | Status |
-|--------|----------|------------------|:------:|
-| POST | `/auth/register` | auth | ✅ |
-| POST | `/auth/login` | auth | ✅ |
-| GET | `/users/me` | auth | ✅ |
-| GET | `/products` | products | ✅ |
-| GET | `/products/{id}` | products | ✅ |
-| POST | `/cart/items` | cart | ✅ |
-| GET | `/cart` | cart | ✅ |
-| PUT | `/cart/items/{id}` | cart | ✅ |
-| DELETE | `/cart/items/{id}` | cart | ✅ |
-| DELETE | `/cart` | cart | ✅ |
-| POST | `/orders` | checkout | ✅ |
-| GET | `/orders` | orders | ✅ |
-| GET | `/orders/{id}` | orders | ✅ |
-| PATCH | `/orders/{id}/status` | admin | ✅ |
-| POST | `/shipping/quote` | shipping | ✅ |
-| GET | `/coupons/{code}` | checkout | ✅ |
-| POST | `/payments?orderId=` | payments | ✅ |
-| GET | `/payments/{id}` | payments | ✅ |
-| GET | `/payments?orderId=` | payments (F5-safe) | ✅ |
-| POST | `/payments/card?orderId=` | payments | ✅ |
-| GET | `/admin/dashboard` | admin | ✅ |
-| GET | `/admin/orders` | admin | ✅ |
-| GET | `/admin/users` | admin | ✅ |
-| PATCH | `/admin/users/{id}/role` | admin | ✅ |
-| GET | `/admin/products/low-stock` | admin | ✅ |
-| POST | `/admin/products/{id}/restock` | admin | ✅ |
-
-### Formatos principais
-
-**Erro (formato único):**
-```json
-{ "status": 400, "error": "Bad Request", "message": "..." }
-```
-
-**Token:**
-```json
-{ "access_token": "...", "token_type": "Bearer", "expires_in": 3600 }
-```
-
-**Carrinho, Pedido, Pagamento:** ver `README.md` do backend.
-
----
-
-## Decisões técnicas — Backend
-
-| Decisão | Por quê |
-|---------|---------|
-| **`BigDecimal`** para dinheiro | Evita erro de arredondamento de `double` |
-| **JWT stateless** | API escala horizontalmente sem sessão |
-| **Flyway** em produção, **H2 create-drop** em testes | Schema real auditável + testes rápidos |
-| **Snapshot de preços** em `OrderItem` | Se o produto mudar, o pedido mantém o valor histórico |
-| **`@OnDelete(CASCADE)`** explícito | FKs consistentes entre H2 e PostgreSQL |
-| **`record`** para DTOs | Imutabilidade e menos boilerplate |
-| **`@EnableMethodSecurity`** | Sem isso, `@PreAuthorize` é ignorado silenciosamente |
-| **`username = user.getId()`** no `UserDetailsServiceImpl` | O subject do JWT é o ID do usuário |
-| **`total = subtotal − discount + shippingCost`** | Fórmula canônica em `OrderService` |
-| **Cache Redis com TTL 5 min** | Reduz carga em consultas repetidas do catálogo |
-| **Dois caches separados** (`products`, `productLists`) | Invalidação cirúrgica sem derrubar listas |
-| **`PrometheusMetricsConfig` explícito** | Contorna bug de auto-config do Spring Boot 3.4 |
-| **Stripe mockado** (`StripePaymentGateway`) | Testa o fluxo sem depender do SDK externo |
-| **Coluna `discount_value`** (não `value`) | `value` é palavra reservada em SQL |
-| **`RestAuthenticationEntryPoint`** | Retorna 401 em vez de 403 default do Spring |
-| **`GET /payments?orderId`** | F5-safe — frontend recupera o Pix sem duplicata |
-| **`.env` + `run-dev.sh`** | Centraliza variáveis sem hardcode |
-| **Docker Compose com Healthcheck** | Spring só sobe após Postgres aceitar conexão |
-| **`FakeEmbeddingProvider` em `src/main`** | Determinístico, reutilizável |
-| **`InMemoryVectorStore` como padrão** | Permite TDD rápido; pgvector depois |
-| **Eventos de domínio para indexação** | Desacopla `ProductService` de `ProductIndexer` |
-| **Um único `@EventListener` despachando por `active`** | Evita bug de dois listeners mutando o índice em sentidos opostos |
-| **`threshold` no `VectorRetriever`** | Descarta resultados com baixa similaridade |
-
----
-
-## Decisões técnicas — Frontend
-
-| Decisão | Por quê |
-|---------|---------|
-| **Feature-Sliced Design (FSD)** | Evita acoplamento, escala por domínio de negócio |
-| **React 19 + Vite 6** | Fast refresh, build rápido |
-| **Tailwind CSS 4** via plugin Vite | Zero-config, tokens via `@theme` |
-| **TanStack Query** para server state | Cache, retry, invalidação declarativa |
-| **Zustand** para client state | Store de auth e carrinho — simples, sem `Provider` |
-| **Axios + interceptors** | Injeção automática de Bearer + tratamento global de 401 |
-| **`ProtectedRoute` / `GuestRoute` / `AdminRoute`** | Guards declarativos por role/sessão |
-| **Sincronização de busca/paginação na URL** | Compartilhável, back/forward funcionam |
-| **Bootstrapper no `App.tsx`** | Valida token via `/users/me` antes de renderizar |
-| **React Hook Form + Zod** | Validação schema-first, alinhada com Bean Validation |
-| **Sonner** para toasts | Acessível, empilhável, sem CSS extra |
-| **Lazy Loading + Suspense** | Reduz bundle inicial |
-| **F5-safe payments** (`GET /payments?orderId=`) | Recupera o QR Pix sem gerar duplicata |
-| **Polling com `usePaymentPolling`** | Atualiza o status do pagamento a cada 3s até CONFIRMED |
-| **`localStorage` para JWT** *(provisório)* | Simples — **revisar antes de produção** (XSS) |
-| **Vitest + Testing Library** | Mesma API do Jest, integração nativa com Vite |
-| **`@/` alias** | Imports limpos, refatoração sem caminhos relativos |
-| **Evento `auth:logout` global** | Desacopla o interceptor Axios da store de auth |
-
----
-
-## Pontos de atenção
-
-### Backend
-
-1. **`GlobalExceptionHandler`** não cobre 403, 405, 409, 500. Erros 403/500 usam formato default do Spring.
-2. **Stripe é mock.** Para produção, adicionar `com.stripe:stripe-java` + configurar `stripe.api-key` e `stripe.webhook-secret`.
-3. **`JWT_EXPIRATION_MS`** hardcoded em `application.yml` (não lê env var).
-4. **`PgVectorStore`** ainda não existe — só `InMemoryVectorStore`. Necessário migration V10 com pgvector.
-5. **Testes de CORS com MockMvc dão falso positivo.** Valide sempre com `curl` + app rodando.
-6. **`@EventListener` múltiplos no mesmo tipo de evento são perigosos.** Prefira um único listener que despacha por estado/campo.
-
-### Frontend
-
-1. **`localStorage` para JWT** — vulnerável a XSS. Migrar para `httpOnly cookies` + CSRF antes de prod.
-2. **`AdminProducts` usa `productApi.list`** (público). Ideal: endpoint `GET /admin/products` paginado no backend.
-3. **Sem cobertura E2E** (Playwright) — apenas unit/integration com Vitest.
-4. **Sem Sentry / observabilidade.**
-5. **Deploy ainda não configurado** (Vercel/Netlify + CORS prod no backend).
-
----
-
-## Bugs encontrados e correções
-
-### Backend
-
-| # | Bug | Correção |
-|---|-----|----------|
-| 1 | `@PreAuthorize` ignorado silenciosamente | `@EnableMethodSecurity` no `SecurityConfig` |
-| 2 | 403 em vez de 401 para token ausente | `RestAuthenticationEntryPoint` customizado |
-| 3 | Coluna `value` reservada em SQL | Renomear para `discount_value` |
-| 4 | FKs inconsistentes entre H2 e PostgreSQL | `@OnDelete(CASCADE)` explícito |
-| 5 | `MeterRegistry` injetado cedo quebrava auto-config | `PrometheusMetricsConfig` explícito |
-| 6 | Warnings do Mockito/ByteBuddy no JDK 21 | `-XX:+EnableDynamicAgentLoading` no Surefire |
-| 7 | Nomes de parâmetros perdidos em runtime | `<parameters>true</parameters>` no Maven |
-| 8 | Cache servia dados obsoletos após update | `@CacheEvict` em `create`/`update`/`delete` |
-| 9 | `CorsConfigTest` dava falso positivo | Validar via `curl` + `CorsConfig` real |
-| 10 | `ProductIndexer` sem beans de dependência quebrava `@SpringBootTest` | `AssistantConfig` registrando `EmbeddingProvider` e `VectorStore` |
-| 11 | `ProductIndexer` com dois `@EventListener` apagava produtos recém-criados | Um único `onProductEvent()` despachando por `active` |
-
-### Frontend
-
-| # | Sintoma | Correção |
-|---|---------|----------|
-| 1 | Token `USER` no mock da store (backend manda `CUSTOMER`) | Trocar para `'CUSTOMER'` |
-| 2 | `productApi.getById(id as string)` — erro de tipo | `getById(Number(id))` |
-| 3 | `ShippingQuoteResponse` tipado como array | Envelopar em `{ options: [...] }` |
-| 4 | `waitFor` importado mas não usado | Remover dos imports nos testes |
-| 5 | Ambiguidade de `aria-label` no `AdminProducts` | Diferenciar `repor quantidade` (input) e `repor estoque` (botão) |
-| 6 | Botão "Repor" desabilitado antes do React processar o input | `waitFor(() => expect(button).toBeEnabled())` no teste |
-| 7 | Teste de polling com fake timers travando | Usar `vi.waitFor` (nativo do Vitest) em vez do `waitFor` do Testing Library |
-
----
-
-## Como executar — Backend
-
-### Pré-requisitos
-
-- JDK 21
-- Docker + Docker Compose
-- Maven Wrapper (incluído)
-
-### Passos
-
-```bash
 git clone https://github.com/AlvesCosta08/loja-api.git
 cd loja-api
 cp .env.example .env
 ./run-dev.sh
-```
 
-A API sobe em **http://localhost:8080**.
 
-### Subcomandos do `run-dev.sh`
-
-```bash
 ./run-dev.sh up        # sobe docker + app
 ./run-dev.sh down      # derruba serviços
 ./run-dev.sh reset     # limpa banco e sobe de novo
 ./run-dev.sh db info   # flyway info
 ./run-dev.sh db migrate
 ./run-dev.sh mvn test  # roda os testes
-```
 
-### Testes
 
-```bash
-./mvnw clean test      # 150 testes
-```
-
----
-
-## Como executar — Frontend
-
-### Pré-requisitos
-
-- Node.js 20 LTS+
-- Backend rodando em `http://localhost:8080`
-
-### Passos
-
-```bash
 git clone https://github.com/AlvesCosta08/loja-web.git
 cd loja-web
 npm install
 cp .env.example .env
 # VITE_API_URL=http://localhost:8080
 npm run dev
-```
 
-Acesse **http://localhost:5173**.
 
-### Testes e build
-
-```bash
 npx vitest run         # 37 testes
 npm run build          # gera dist/
-```
 
----
-
-## Próximos passos
-
-### Fase 10 — Deploy (a única pendente)
-
-- **Frontend:** Vercel ou Netlify. Configurar `vercel.json`/`netlify.toml` com SPA fallback + `VITE_API_URL` de produção.
-- **Backend:** Render ou Railway. Subir `Dockerfile`, provisionar PostgreSQL + Redis, configurar variáveis de ambiente.
-- **CORS prod:** Ajustar `CorsConfig` no backend para o domínio do frontend.
-- **Validação:** `curl` de preflight (`OPTIONS`) para confirmar que o navegador não vai bloquear.
-
-### Backend (fases futuras)
-
-1. `PgVectorStore` + migration V10 (pgvector).
-2. `AssistantService` (retriever + LLM).
-3. `AssistantController` (`POST /assistant/chat`).
-4. Servidor MCP com tools (search, cart, order, payment).
-5. Fine-tuning (classificador de intenção).
-
----
-
-## Possíveis extensões futuras
-
-### Frontend
-
-- Migrar auth para `httpOnly cookies` + CSRF (antes de prod).
-- E2E com Playwright cobrindo checkout completo.
-- PWA (offline-first para catálogo).
-- Storybook para a camada `shared/components/ui`.
-- Sentry para observabilidade.
-
-### Backend
-
-- Stripe real.
-- pgvector em produção.
-- Observabilidade: dashboards Grafana pré-configurados.
-- Handlers completos no `GlobalExceptionHandler` (403, 405, 409, 500).
-
-### IA
-
-- AssistantService público (chat de suporte).
-- Servidor MCP consumível por agentes externos.
-- Fine-tuning de classificador de intenção.
-
----
-
-## Como atualizar este documento
-
+Possíveis extensões futuras
+Frontend
+Migrar auth para httpOnly cookies + CSRF (antes de prod).
+E2E com Playwright cobrindo checkout completo.
+PWA (offline-first para catálogo).
+Storybook para a camada shared/components/ui.
+Sentry para observabilidade.
+Backend
+Stripe real.
+pgvector em produção.
+Observabilidade: dashboards Grafana pré-configurados.
+IA
+AssistantService público (chat de suporte).
+Servidor MCP consumível por agentes externos.
+Fine-tuning de classificador de intenção.
+Como atualizar este documento
 Ao final de cada fase:
-
-1. **Atualize as tabelas de roadmap** (backend/frontend) com o status real.
-2. **Adicione uma subseção em "Fases concluídas"** com: endpoints, testes (+N), implementação, decisões.
-3. **Registre bugs** encontrados na seção correspondente, com sintoma + correção.
-4. **Atualize "Status geral"** com contagem de testes e migrations.
-5. **Atualize "Última atualização"** nas Info Gerais.
-6. **Commit** com `docs(resumo): atualiza contexto após fase X`.
-
-> ⚠️ **Regra de ouro:** nunca marcar fase como concluída sem `npm run test:run` (frontend) ou `mvn clean test` (backend) verdes.
+Atualize as tabelas de roadmap (backend/frontend) com o status real.
+Adicione uma subseção em "Fases concluídas" com: endpoints, testes (+N), implementação, decisões.
+Registre bugs encontrados na seção correspondente, com sintoma + correção.
+Atualize "Status geral" com contagem de testes e migrations.
+Atualize "Última atualização" nas Info Gerais.
+Commit com docs(resumo): atualiza contexto após fase X.
+⚠️ Regra de ouro: nunca marcar fase como concluída sem npm run test:run (frontend) ou mvn clean test (backend) verdes.

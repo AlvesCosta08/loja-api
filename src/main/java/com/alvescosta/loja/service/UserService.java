@@ -5,7 +5,7 @@ import com.alvescosta.loja.domain.User;
 import com.alvescosta.loja.dto.LoginRequest;
 import com.alvescosta.loja.dto.UserCreateRequest;
 import com.alvescosta.loja.dto.UserResponse;
-import com.alvescosta.loja.exception.BusinessException;
+import com.alvescosta.loja.exception.DuplicateEmailException;
 import com.alvescosta.loja.exception.UnauthorizedException;
 import com.alvescosta.loja.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,8 @@ public class UserService {
     @Transactional
     public UserResponse register(UserCreateRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessException("Email ja cadastrado: " + request.email());
+            // CORREÇÃO AQUI: Adicionada a string "E-mail já cadastrado: " antes do e-mail
+            throw new DuplicateEmailException("E-mail já cadastrado: " + request.email());
         }
 
         User user = User.builder()
