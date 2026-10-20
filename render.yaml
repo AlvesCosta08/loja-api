@@ -1,5 +1,4 @@
 services:
-  # 1. Seu serviço Spring Boot (Web Service)
   - type: web
     name: loja-api
     runtime: docker
@@ -16,29 +15,36 @@ services:
         value: "3600000"
       - key: CORS_ALLOWED_ORIGINS
         value: "https://loja-web.vercel.app"
-      # ★ Conectar ao banco PostgreSQL na mesma rede privada
+      # --- Banco de dados (gerenciado pelo Render) ---
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://loja-postgres:5432/loja  # "loja-postgres" é o nome do Private Service abaixo
+        sync: false   # preencher no painel: jdbc:postgresql://<host-interno>:5432/loja
       - key: SPRING_DATASOURCE_USERNAME
-        value: loja_user
+        fromDatabase:
+          name: loja-db
+          property: user
       - key: SPRING_DATASOURCE_PASSWORD
-        value: sua_senha_forte_aqui
+        fromDatabase:
+          name: loja-db
+          property: password
+      # --- Redis (opcional) ---
+      - key: SPRING_DATA_REDIS_HOST
+        fromService:
+          type: redis
+          name: loja-redis
+          property: host
+      - key: SPRING_DATA_REDIS_PORT
+        fromService:
+          type: redis
+          name: loja-redis
+          property: port
 
-  # 2. Banco PostgreSQL auto-hospedado (Private Service)
-  - type: pserv
-    name: loja-postgres
-    runtime: docker
-    image:
-      url: docker.io/library/postgres:16  # Usar imagem oficial do PostgreSQL
+databases:
+  - name: loja-db
+    databaseName: loja
+    user: loja_user
     plan: starter
-    envVars:
-      - key: POSTGRES_DB
-        value: loja
-      - key: POSTGRES_USER
-        value: loja_user
-      - key: POSTGRES_PASSWORD
-        value: sua_senha_forte_aqui
-    disk:
-      name: pg-data
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 10
+
+redis:
+  - name: loja-redis
+    plan: starter
+    maxmemoryPolicy: noeviction
