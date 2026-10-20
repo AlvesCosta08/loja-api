@@ -1,8 +1,8 @@
 spring:
   datasource:
-    # O Render fornece a URL no formato: postgres://usuario:senha@host:porta/banco
-    # O Spring Boot 3 converte isso automaticamente para jdbc:postgresql://...
-    url: ${DATABASE_URL}
+    # Adiciona 'jdbc:' antes da variável. 
+    # Ex: se DATABASE_URL for 'postgres://...', vira 'jdbc:postgres://...'
+    url: jdbc:${DATABASE_URL}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -12,7 +12,6 @@ spring:
     locations: classpath:db/migration
 
 server:
-  # O Render injeta a variável PORT dinamicamente (ex: 10000)
   port: ${PORT:8080}
 
 jwt:
