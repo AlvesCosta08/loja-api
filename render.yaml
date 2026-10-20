@@ -4,21 +4,29 @@ services:
     runtime: docker
     repo: https://github.com/AlvesCosta08/loja-api
     branch: main
-    plan: starter # Ou 'free' se disponível, mas 'starter' é mais estável para Java
+    plan: starter
     healthCheckPath: /actuator/health
     envVars:
       - key: JAVA_TOOL_OPTIONS
-        value: "-XX:MaxRAMPercentage=75.0 -XX:+UseSerialGC" # Otimiza a JVM para containers com pouca RAM
+        value: "-XX:MaxRAMPercentage=75.0 -XX:+UseSerialGC"
       - key: JWT_SECRET
-        generateValue: true # O Render gerará um segredo aleatório seguro para você
+        generateValue: true
       - key: JWT_EXPIRATION_MS
         value: "3600000"
       - key: CORS_ALLOWED_ORIGINS
-        value: "https://loja-web.vercel.app" # Substitua pela URL real do seu frontend
-      - key: DATABASE_URL
+        value: "https://loja-web.vercel.app"
+  
+      - key: SPRING_DATASOURCE_URL
+        sync: false         
+      - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: loja-db
-          property: connectionString
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: loja-db
+          property: password
+    
       - key: REDIS_URL
         fromService:
           type: redis
@@ -29,11 +37,4 @@ databases:
   - name: loja-db
     databaseName: loja
     user: loja_user
-    plan: starter # PostgreSQL 16
-
-# O Redis é opcional. Se quiser usar, descomente as linhas abaixo.
-# Se não quiser, remova a referência ao REDIS_URL acima e defina SPRING_CACHE_TYPE=simple nas env vars.
-# redis:
-#   - name: loja-redis
-#     plan: starter
-#     maxmemoryPolicy: noeviction
+    plan: starter
